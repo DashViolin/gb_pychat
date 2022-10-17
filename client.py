@@ -71,8 +71,10 @@ with open(file, "w", encoding=default_coding) as f:
         f.write(f"{word}\n")
 with open(file, "rb") as f:
     raw = f.read()
-    encoding = chardet.detect(raw)['encoding']    
-    print(f'Кодировка файла: {encoding}')
-    text = raw.decode(encoding)
+    encoding = chardet.detect(raw)["encoding"]
+    print(f"Кодировка файла: {encoding}")
+    text = (
+        raw.decode(encoding).encode("utf-8").decode("utf-8")
+    )  # теперь текст точно в UTF-8, независимо от того, в какой кодировке был создан файл :)
     print(text)
 os.remove(file)
