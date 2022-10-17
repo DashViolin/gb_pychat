@@ -6,6 +6,7 @@ authors = ["DashViolin <mymail@srv.org>"]
 
 [tool.poetry.dependencies]
 python = "^3.10"
+chardet = "^5.0.0"
 
 [tool.poetry.dev-dependencies]
 isort = "^5.10.1"
