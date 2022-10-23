@@ -7,6 +7,7 @@ authors = ["DashViolin <mymail@srv.org>"]
 [tool.poetry.dependencies]
 python = "^3.10"
 chardet = "^5.0.0"
+PyYAML = "^6.0"
 
 [tool.poetry.dev-dependencies]
 isort = "^5.10.1"
@@ -19,4 +20,3 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.black]
 line-length = 120
-
