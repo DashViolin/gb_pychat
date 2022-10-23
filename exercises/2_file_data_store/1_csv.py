@@ -12,10 +12,10 @@
 # Проверить работу программы через вызов функции write_to_csv().
 
 import csv
-import chardet
 import pathlib
 import re
 
+import chardet
 
 base_dir = pathlib.Path.cwd() / "exercises" / "2_file_data_store"
 os_data_file = base_dir / "os_data.csv"

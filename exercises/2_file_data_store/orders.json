@@ -5,28 +5,35 @@
             "quantity": 1,
             "price": 1000.0,
             "buyer": "user1",
-            "date": "2022-10-20"
+            "date": "2022-10-23"
+        },
+        {
+            "item": "Стол компьютерный \"МФ Мастер\"",
+            "quantity": 12,
+            "price": 100.0,
+            "buyer": "пользователь №5",
+            "date": "2022-10-23"
         },
         {
             "item": "USB Flash Drive",
             "quantity": 3,
             "price": 10.5,
             "buyer": "user2",
-            "date": "2022-10-20"
+            "date": "2022-10-23"
         },
         {
             "item": "Intel SSD",
             "quantity": 1,
             "price": 248.4,
             "buyer": "user1",
-            "date": "2022-10-20"
+            "date": "2022-10-23"
         },
         {
             "item": "DVD-RW",
             "quantity": 12,
             "price": 30.0,
             "buyer": "user4",
-            "date": "2022-10-20"
+            "date": "2022-10-23"
         }
     ]
 }

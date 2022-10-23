@@ -8,9 +8,9 @@
 # а также установить возможность работы с юникодом: allow_unicode = True;
 #  - Реализовать считывание данных из созданного файла и проверить, совпадают ли они с исходными.
 
-import yaml
 import pathlib
 
+import yaml
 
 data = {
     "key1": ["list_item1", "list_item2", 100.0, True],
@@ -22,10 +22,10 @@ base_dir = pathlib.Path.cwd() / "exercises" / "2_file_data_store"
 data_file = base_dir / "example.yml"
 
 
-with open(data_file, "w") as file:
+with open(data_file, "w", encoding="utf-8") as file:
     yaml.dump(data, file, allow_unicode=True, default_flow_style=False)
 
-with open(data_file) as file:
+with open(data_file, "r", encoding="utf-8") as file:
     loaded_data = yaml.safe_load(file)
 
 assert loaded_data == data
