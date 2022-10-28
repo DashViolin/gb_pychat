@@ -49,9 +49,8 @@ for site in ("yandex.ru", "youtube.com"):
     args = ["ping", "-c", "4", site]
     ping = subprocess.Popen(args, stdout=subprocess.PIPE)
     for line in ping.stdout:
-        encoding = chardet.detect(line)['encoding']
+        encoding = chardet.detect(line)["encoding"]
         print(line.decode(encoding).strip())
-    print(f'Кодировка: {encoding}')
 
 
 print("\nЗадание 6:")
