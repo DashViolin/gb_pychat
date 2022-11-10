@@ -1,21 +1,7 @@
-# 1. Реализовать простое клиент-серверное взаимодействие по протоколу JIM (JSON instant messaging):
-# клиент отправляет запрос серверу;
-# сервер отвечает соответствующим кодом результата.
-# Клиент и сервер должны быть реализованы в виде отдельных скриптов, содержащих соответствующие функции.
-#
-# Функции клиента:
-# - сформировать presence-сообщение;
-# - отправить сообщение серверу;
-# - получить ответ сервера;
-# - разобрать сообщение сервера;
-# - параметры командной строки скрипта client.py <addr> [<port>]:
-#   - addr — ip-адрес сервера;
-#   - port — tcp-порт на сервере, по умолчанию 7777.
-
 import argparse
+import json
 
-from common import config
-from common import JIMClient
+from common import JIMClient, config
 
 
 def parse_args():
@@ -43,22 +29,25 @@ def parse_args():
 
 def main():
     conn_params = parse_args()
-    jim_client = JIMClient(conn_params, "user")
-    jim_client.send_presence()
-
-    try:
-        while True:
-            msg_text = str(input("Введите текст (или exit для выхода): "))
-            if msg_text.strip() == config.Common.EXIT_WORD:
-                jim_client.close()
-                return
-
-            resp_msg = jim_client.send_msg("user_dest", msg_text)
-            print(f"Сообщение от сервера: '{resp_msg}'", end="\n\n")
-    except Exception:
-        pass
-    finally:
-        jim_client.close()
+    username = "user"
+    jim_client = JIMClient(conn_params, username)
+    conn_is_ok, response = jim_client.connect()
+    response = json.dumps(response, indent=2)
+    print(f"\nСообщение от сервера: {response}", end="\n\n")
+    if conn_is_ok:
+        try:
+            while True:
+                msg_text = str(input("Введите текст (или exit для выхода): "))
+                if msg_text.strip() == config.Common.EXIT_WORD:
+                    jim_client.close()
+                    break
+                msg = jim_client.make_msg("user_dest", msg_text)
+                response = json.dumps(jim_client.send_msg(msg), indent=2)
+                print(f"\nСообщение от сервера: {response}", end="\n\n")
+        except Exception:
+            pass
+        finally:
+            jim_client.close()
 
 
 if __name__ == "__main__":
