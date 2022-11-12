@@ -1,21 +1,8 @@
-# 1. Реализовать простое клиент-серверное взаимодействие по протоколу JIM (JSON instant messaging):
-# клиент отправляет запрос серверу;
-# сервер отвечает соответствующим кодом результата.
-# Клиент и сервер должны быть реализованы в виде отдельных скриптов, содержащих соответствующие функции.
-#
-# Функции сервера:
-# - принимает сообщение клиента;
-# - формирует ответ клиенту;
-# - отправляет ответ клиенту;
-# - имеет параметры командной строки:
-#   -p <port> — TCP-порт для работы (по умолчанию использует 7777);
-#   -a <addr> — IP-адрес для прослушивания (по умолчанию слушает все доступные адреса).
-
 import argparse
+import json
 from http import HTTPStatus
 
-from common import config
-from common import JIMServer
+from common import JIMServer, config
 
 
 def parse_args():
@@ -44,12 +31,15 @@ def parse_args():
 def run_server():
     conn_params = parse_args()
     jim_server = JIMServer(conn_params)
+    jim_server.listen()
 
     try:
         while True:
             msg = jim_server.recv()
-            print(f"Сообщение: '{msg}' было отправлено клиентом {':'.join(map(str, jim_server.addr))}", end="\n\n")
-            jim_server.send_response(HTTPStatus.OK)
+            msg_formatted = json.dumps(msg, indent=2)
+            print(f"Сообщение от клиента {':'.join(map(str, jim_server.addr))}: {msg_formatted}", end="\n\n")
+            response = jim_server.make_response_msg(HTTPStatus.OK)
+            jim_server.send(response)
     except Exception:
         pass
     finally:
