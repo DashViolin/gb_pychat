@@ -17,7 +17,7 @@ class JIMClient(JIMBase, ContextDecorator):
 
     def __exit__(self, *exc):
         print("\nЗакрываю соединение...")
-        self.sock.close()
+        self.close()
 
     def connect(self):
         self.sock.connect(self.conn_params)

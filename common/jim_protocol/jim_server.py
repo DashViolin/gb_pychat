@@ -18,7 +18,7 @@ class JIMServer(JIMBase, ContextDecorator):
 
     def __exit__(self, *exc):
         print("\nЗакрываю соединение...")
-        self.sock.close()
+        self.close()
 
     def listen(self):
         self.sock.bind(self.conn_params)

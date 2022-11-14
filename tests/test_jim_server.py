@@ -1,7 +1,8 @@
 from http import HTTPStatus
 from unittest import TestCase, mock
 
-from common.jim_protocol import Actions, JIMServer, Keys
+from common.jim_protocol.jim_base import Actions, Keys
+from common.jim_protocol.jim_server import JIMServer
 
 
 class BaseServerTestCase(TestCase):
@@ -30,7 +31,7 @@ class TestJIMBase(BaseServerTestCase):
     def test_dump_load_msg(self):
         orig_msg = {"some_key": "some_value"}
         result = self.server._load_msg(self.server._dump_msg(orig_msg))
-        orig_msg.update(self.mock_time)
+        orig_msg.update(**self.mock_time)
         result.update(self.mock_time)
         self.assertEqual(orig_msg, result)
 
