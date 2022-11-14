@@ -2,7 +2,12 @@ from contextlib import ContextDecorator
 from http import HTTPStatus
 from socket import AF_INET, SOCK_STREAM, socket
 
+from common import config
+from log.client_log_config import logging
+
 from .jim_base import Actions, JIMBase, Keys
+
+logger = logging.getLogger(config.Client.MAIN_LOGGER_NAME)
 
 
 class JIMClient(JIMBase, ContextDecorator):
@@ -16,7 +21,7 @@ class JIMClient(JIMBase, ContextDecorator):
         return self
 
     def __exit__(self, *exc):
-        print("\nЗакрываю соединение...")
+        logger.info("Закрываю соединение...")
         self.close()
 
     def connect(self):

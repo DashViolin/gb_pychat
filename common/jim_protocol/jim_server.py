@@ -3,8 +3,11 @@ from http import HTTPStatus
 from socket import AF_INET, SOCK_STREAM, socket
 
 from common import config
+from log.server_log_config import logging
 
 from .jim_base import Actions, JIMBase, Keys
+
+logger = logging.getLogger(config.Server.MAIN_LOGGER_NAME)
 
 
 class JIMServer(JIMBase, ContextDecorator):
@@ -17,15 +20,15 @@ class JIMServer(JIMBase, ContextDecorator):
         return self
 
     def __exit__(self, *exc):
-        print("\nЗакрываю соединение...")
+        logger.info("Закрываю соединение...")
         self.close()
 
     def listen(self):
         self.sock.bind(self.conn_params)
-        print("Сервер запущен.", end="\n\n")
-        self.sock.listen(config.Sever.MAX_CONNECTIONS)
+        logger.info(f"Сервер запущен на {':'.join(map(str, self.conn_params))}.")
+        self.sock.listen(config.Server.MAX_CONNECTIONS)
         self.client, self.addr = self.sock.accept()
-        print(f"Подключился клиент {':'.join(map(str, self.addr))}", end="\n\n")
+        logger.info(f"Подключился клиент {':'.join(map(str, self.addr))}")
 
     def close(self):
         self.sock.close()
