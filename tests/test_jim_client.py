@@ -40,7 +40,7 @@ class TestJIMClient(TestCase):
     def test_make_authenticate_msg(self):
         passwd = "qwerty1234"
         msg_orig = {
-            Keys.ACTION: Actions.AUTHENTICATE,
+            Keys.ACTION: Actions.AUTH,
             Keys.USER: {Keys.ACCOUNT_NAME: self.username, Keys.PASSWORD: passwd},
         }
         msg = self.client.make_authenticate_msg(password=passwd)
@@ -60,7 +60,7 @@ class TestJIMClient(TestCase):
             Keys.ACTION: Actions.MSG,
             Keys.FROM: self.username,
             Keys.TO: target,
-            Keys.MESSAGE: msg_text,
+            Keys.MSG: msg_text,
             Keys.ENCODING: self.encoding,
         }
         msg = self.client.make_msg(user_or_room=target, message=msg_text)

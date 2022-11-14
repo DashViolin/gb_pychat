@@ -1,8 +1,13 @@
 import argparse
 import json
+from time import sleep
 from http import HTTPStatus
 
-from common import JIMServer, config
+from common import config
+from common import JIMServer
+from common import NonDictInputError
+from common import IncorrectDataRecivedError
+from common import ReqiuredFieldMissingError
 
 
 def parse_args():
@@ -28,21 +33,33 @@ def parse_args():
     return args.address, args.port
 
 
+def print_msg(msg: dict, addr: tuple):
+    msg_formatted = json.dumps(msg, indent=2, ensure_ascii=False)
+    print(f"Сообщение от клиента {':'.join(map(str, addr))}: {msg_formatted}", end="\n\n")
+
+
 def run_server():
     conn_params = parse_args()
     jim_server = JIMServer(conn_params)
-    jim_server.listen()
-
+    try:
+        jim_server.listen()
+    except OSError:
+        print("Ожидается освобождение сокета...")
+        sleep(1)
     try:
         while True:
-            msg = jim_server.recv()
-            msg_formatted = json.dumps(msg, indent=2)
-            print(f"Сообщение от клиента {':'.join(map(str, jim_server.addr))}: {msg_formatted}", end="\n\n")
-            response = jim_server.make_response_msg(HTTPStatus.OK)
-            jim_server.send(response)
-    except Exception:
-        pass
-    finally:
+            try:
+                msg = jim_server.recv()
+                jim_server.validate_msg(msg)
+                print_msg(msg, jim_server.addr)
+                response = jim_server.make_response_msg(HTTPStatus.OK)
+                jim_server.send(response)
+            except (NonDictInputError, IncorrectDataRecivedError, ReqiuredFieldMissingError) as ex:
+                error_msg_response = jim_server.make_response_msg(HTTPStatus.INTERNAL_SERVER_ERROR, description=str(ex))
+                jim_server.send(error_msg_response)
+                print(ex)
+    except (KeyboardInterrupt, BrokenPipeError, ValueError):
+        print("\nЗакрываю соединение...")
         jim_server.close()
 
 

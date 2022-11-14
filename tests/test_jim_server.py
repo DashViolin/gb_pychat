@@ -4,7 +4,7 @@ from unittest import TestCase, mock
 from common.jim_protocol import Actions, JIMServer, Keys
 
 
-class TestJIMBase(TestCase):
+class BaseServerTestCase(TestCase):
     def setUp(self):
         self.mock_time = {Keys.TIME: 0}
         conn_params = ("127.0.0.1", 7777)
@@ -17,12 +17,17 @@ class TestJIMBase(TestCase):
         self.server.listen()
         return super().setUp()
 
-    def test_jimbase_from_timestamp(self):
+
+class TestJIMBase(BaseServerTestCase):
+    def setUp(self):
+        return super().setUp()
+
+    def test_from_timestamp(self):
         iso_time_orig = "1970-01-01T03:00:00"
         iso_time = self.server._from_timestamp(0)
         self.assertEqual(iso_time, iso_time_orig)
 
-    def test_jimbase_dump_load_msg(self):
+    def test_dump_load_msg(self):
         orig_msg = {"some_key": "some_value"}
         result = self.server._load_msg(self.server._dump_msg(orig_msg))
         orig_msg.update(self.mock_time)
@@ -30,17 +35,8 @@ class TestJIMBase(TestCase):
         self.assertEqual(orig_msg, result)
 
 
-class TestJIMServer(TestCase):
+class TestJIMServer(BaseServerTestCase):
     def setUp(self):
-        self.mock_time = {Keys.TIME: 0}
-        conn_params = ("127.0.0.1", 7777)
-        self.server = JIMServer(conn_params)
-        self.server.close()
-        self.server.sock = mock.Mock()
-        self.server.sock.listen.return_value = None
-        self.server.sock.bind.return_value = None
-        self.server.sock.accept.return_value = (mock.Mock(), ("192.168.1.1", 33333))
-        self.server.listen()
         return super().setUp()
 
     def test_recv(self):
