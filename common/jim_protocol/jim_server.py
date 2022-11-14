@@ -1,14 +1,10 @@
-import json
-from abc import abstractmethod
 from contextlib import ContextDecorator
-from dataclasses import dataclass
 from http import HTTPStatus
 from socket import AF_INET, SOCK_STREAM, socket
 
 from common import config
-from .jim_base import JIMBase
-from .jim_base import Keys
-from .jim_base import Actions
+
+from .jim_base import Actions, JIMBase, Keys
 
 
 class JIMServer(JIMBase, ContextDecorator):
@@ -20,7 +16,8 @@ class JIMServer(JIMBase, ContextDecorator):
     def __enter__(self):
         return self
 
-    def __exit__(self):
+    def __exit__(self, *exc):
+        print("\nЗакрываю соединение...")
         self.sock.close()
 
     def listen(self):

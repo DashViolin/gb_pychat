@@ -1,11 +1,11 @@
 import argparse
 import json
+import sys
 from time import sleep
 
-from common import JIMClient, config
-from common import NonDictInputError
-from common import IncorrectDataRecivedError
-from common import ReqiuredFieldMissingError
+from common import config
+from common.jim_protocol.errors import IncorrectDataRecivedError, NonDictInputError, ReqiuredFieldMissingError
+from common.jim_protocol.jim_client import JIMClient
 
 
 def parse_args():
@@ -39,22 +39,22 @@ def print_response(response):
 def main():
     conn_params = parse_args()
     username = "user"
-    jim_client = JIMClient(conn_params, username)
-    while True:
-        try:
-            conn_is_ok, response = jim_client.connect()
-            if conn_is_ok:
-                break
-        except ConnectionRefusedError:
-            print("Пытаюсь подключиться к серверу...")
-            sleep(1)
+    with JIMClient(conn_params, username) as jim_client:
+        while True:
+            try:
+                conn_is_ok, response = jim_client.connect()
+                if conn_is_ok:
+                    break
+            except ConnectionRefusedError:
+                print("Пытаюсь подключиться к серверу...")
+                sleep(1)
 
-    try:
-        jim_client.validate_msg(response)
-        print_response(response)
-    except (NonDictInputError, IncorrectDataRecivedError, ReqiuredFieldMissingError) as ex:
-        print(ex)
-    try:
+        try:
+            jim_client.validate_msg(response)
+            print_response(response)
+        except (NonDictInputError, IncorrectDataRecivedError, ReqiuredFieldMissingError) as ex:
+            print(ex)
+
         while True:
             try:
                 msg_text = str(input("Введите текст (или exit для выхода): "))
@@ -68,10 +68,10 @@ def main():
                 print_response(response)
             except (NonDictInputError, IncorrectDataRecivedError, ReqiuredFieldMissingError) as ex:
                 print(ex)
-    except (ConnectionResetError, KeyboardInterrupt, BrokenPipeError, ValueError):
-        print("\nЗакрываю соединение...")
-        jim_client.close()
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except (ConnectionResetError, KeyboardInterrupt, BrokenPipeError):
+        sys.exit(0)

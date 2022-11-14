@@ -1,13 +1,12 @@
 import json
-from json import JSONDecodeError
 from abc import abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
+from json import JSONDecodeError
 
 from common import config
-from .errors import NonDictInputError
-from .errors import IncorrectDataRecivedError
-from .errors import ReqiuredFieldMissingError
+
+from .errors import IncorrectDataRecivedError, NonDictInputError, ReqiuredFieldMissingError
 
 
 @dataclass

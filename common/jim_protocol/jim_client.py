@@ -1,19 +1,23 @@
-from abc import abstractmethod
-from dataclasses import dataclass
+from contextlib import ContextDecorator
 from http import HTTPStatus
 from socket import AF_INET, SOCK_STREAM, socket
 
-from .jim_base import JIMBase
-from .jim_base import Keys
-from .jim_base import Actions
+from .jim_base import Actions, JIMBase, Keys
 
 
-class JIMClient(JIMBase):
+class JIMClient(JIMBase, ContextDecorator):
     def __init__(self, conn_params, username) -> None:
         self.username = username
         self.conn_params = conn_params
         self.sock = socket(AF_INET, SOCK_STREAM)
         super().__init__()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        print("\nЗакрываю соединение...")
+        self.sock.close()
 
     def connect(self):
         self.sock.connect(self.conn_params)

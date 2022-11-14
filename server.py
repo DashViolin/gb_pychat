@@ -1,13 +1,12 @@
 import argparse
 import json
-from time import sleep
+import sys
 from http import HTTPStatus
+from time import sleep
 
 from common import config
-from common import JIMServer
-from common import NonDictInputError
-from common import IncorrectDataRecivedError
-from common import ReqiuredFieldMissingError
+from common.jim_protocol.errors import IncorrectDataRecivedError, NonDictInputError, ReqiuredFieldMissingError
+from common.jim_protocol.jim_server import JIMServer
 
 
 def parse_args():
@@ -40,13 +39,13 @@ def print_msg(msg: dict, addr: tuple):
 
 def run_server():
     conn_params = parse_args()
-    jim_server = JIMServer(conn_params)
-    try:
-        jim_server.listen()
-    except OSError:
-        print("Ожидается освобождение сокета...")
-        sleep(1)
-    try:
+    with JIMServer(conn_params) as jim_server:
+        try:
+            jim_server.listen()
+        except OSError:
+            print("Ожидается освобождение сокета...")
+            sleep(1)
+
         while True:
             try:
                 msg = jim_server.recv()
@@ -58,10 +57,10 @@ def run_server():
                 error_msg_response = jim_server.make_response_msg(HTTPStatus.INTERNAL_SERVER_ERROR, description=str(ex))
                 jim_server.send(error_msg_response)
                 print(ex)
-    except (KeyboardInterrupt, BrokenPipeError, ValueError):
-        print("\nЗакрываю соединение...")
-        jim_server.close()
 
 
 if __name__ == "__main__":
-    run_server()
+    try:
+        run_server()
+    except (KeyboardInterrupt, BrokenPipeError):
+        sys.exit(0)
