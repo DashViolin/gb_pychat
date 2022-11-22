@@ -1,7 +1,13 @@
 import argparse
-import json
+import sys
+from time import sleep
 
-from common import JIMClient, config
+from common import config
+from common.jim_protocol.errors import IncorrectDataRecivedError, NonDictInputError, ReqiuredFieldMissingError
+from common.jim_protocol.jim_client import JIMClient
+from log.client_log_config import logging
+
+logger = logging.getLogger(config.Client.MAIN_LOGGER_NAME)
 
 
 def parse_args():
@@ -24,31 +30,58 @@ def parse_args():
         default=config.Common.DEFAULT_PORT,
     )
     args = parser.parse_args()
+    if not 1023 < args.port < 65536:
+        logger.critical(
+            f"Попытка запуска клиента с неподходящим номером порта: {args.port}. Допустимы адреса с 1024 до 65535."
+        )
+        sys.exit(1)
     return args.address, args.port
 
 
 def main():
     conn_params = parse_args()
     username = "user"
-    jim_client = JIMClient(conn_params, username)
-    conn_is_ok, response = jim_client.connect()
-    response = json.dumps(response, indent=2)
-    print(f"\nСообщение от сервера: {response}", end="\n\n")
-    if conn_is_ok:
+    with JIMClient(conn_params, username) as jim_client:
+        while True:
+            try:
+                conn_is_ok, response = jim_client.connect()
+                if conn_is_ok:
+                    break
+            except ConnectionRefusedError:
+                logger.info(f"Пытаюсь подключиться как {username} к серверу {':'.join(map(str, conn_params))}...")
+                sleep(1)
+
         try:
-            while True:
+            jim_client.validate_msg(response)
+            logger.debug(f"Получен ответ от сервера: {response}")
+        except (NonDictInputError, IncorrectDataRecivedError, ReqiuredFieldMissingError) as ex:
+            logger.error(ex)
+
+        while True:
+            try:
                 msg_text = str(input("Введите текст (или exit для выхода): "))
                 if msg_text.strip() == config.Common.EXIT_WORD:
                     jim_client.close()
                     break
+
                 msg = jim_client.make_msg("user_dest", msg_text)
-                response = json.dumps(jim_client.send_msg(msg), indent=2)
-                print(f"\nСообщение от сервера: {response}", end="\n\n")
-        except Exception:
-            pass
-        finally:
-            jim_client.close()
+                response = jim_client.send_msg(msg)
+                logger.debug(f"Отправлено сообщение: {msg}")
+                jim_client.validate_msg(response)
+                logger.debug(f"Получен ответ от сервера: {response}")
+            except (NonDictInputError, IncorrectDataRecivedError, ReqiuredFieldMissingError) as ex:
+                logger.error(ex)
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        logger.info("Работа клиента была принудительно завершена.")
+        sys.exit(0)
+    except (ConnectionRefusedError, ConnectionResetError, BrokenPipeError) as ex:
+        logger.warning(f"Произошел разрыв соединения ({ex})")
+        sys.exit(0)
+    except Exception as ex:
+        logger.critical(str(ex))
+        sys.exit(1)

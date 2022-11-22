@@ -2,7 +2,8 @@ from http import HTTPStatus
 from unittest import TestCase, mock
 
 from common import config
-from common.jim_protocol import Actions, JIMClient, Keys
+from common.jim_protocol.jim_base import Actions, Keys
+from common.jim_protocol.jim_client import JIMClient
 
 
 class TestJIMClient(TestCase):
@@ -14,6 +15,7 @@ class TestJIMClient(TestCase):
         self.mock_resp.update(self.mock_time)
         conn_params = ("127.0.0.1", 7777)
         self.client = JIMClient(conn_params, self.username)
+        self.client.close()
         self.client.sock = mock.Mock()
         self.client.sock.connect.return_value = None
         self.client.sock.send.return_value = None
@@ -40,7 +42,7 @@ class TestJIMClient(TestCase):
     def test_make_authenticate_msg(self):
         passwd = "qwerty1234"
         msg_orig = {
-            Keys.ACTION: Actions.AUTHENTICATE,
+            Keys.ACTION: Actions.AUTH,
             Keys.USER: {Keys.ACCOUNT_NAME: self.username, Keys.PASSWORD: passwd},
         }
         msg = self.client.make_authenticate_msg(password=passwd)
@@ -60,7 +62,7 @@ class TestJIMClient(TestCase):
             Keys.ACTION: Actions.MSG,
             Keys.FROM: self.username,
             Keys.TO: target,
-            Keys.MESSAGE: msg_text,
+            Keys.MSG: msg_text,
             Keys.ENCODING: self.encoding,
         }
         msg = self.client.make_msg(user_or_room=target, message=msg_text)
