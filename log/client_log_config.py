@@ -1,21 +1,35 @@
 import logging
+from logging.handlers import RotatingFileHandler
 
-from common.config import Client, Common
+from config import ClientConf, CommonConf
 
-logger = logging.getLogger(Client.MAIN_LOGGER_NAME)
-formatter = logging.Formatter(Client.MAIN_LOGGER_FORMAT)
-logger.setLevel(Client.MAIN_LOGGER_LEVEL)
+main_logger = logging.getLogger("client.main")
+formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(module)s - %(message)s")
+main_logger.setLevel(logging.DEBUG)
 
-file_handler = logging.FileHandler(Client.LOG_FILE_PATH, encoding=Common.ENCODING)
-file_handler.setLevel(Client.LOG_FILE_LEVEL)
+file_handler = logging.FileHandler(
+    ClientConf.MAIN_LOG_FILE_PATH,
+    encoding=CommonConf.ENCODING,
+)
+file_handler.setLevel(logging.WARNING)
 file_handler.setFormatter(formatter)
+main_logger.addHandler(file_handler)
 
 console_handler = logging.StreamHandler()
-console_handler.setLevel(Client.CONSOLE_LOG_LEVEL)
+console_handler.setLevel(logging.INFO)
 console_handler.setFormatter(formatter)
+main_logger.addHandler(console_handler)
 
-logger.addHandler(console_handler)
-logger.addHandler(file_handler)
 
-if __name__ == "__main__":
-    logger.info("Тестовый запуск логирования")
+call_logger = logging.getLogger("client.call")
+call_logger.setLevel(logging.DEBUG)
+call_handler = RotatingFileHandler(
+    filename=ClientConf.CALL_LOG_FILE_PATH,
+    maxBytes=1024 * 10,  # 10 KiB
+    encoding=CommonConf.ENCODING,
+    backupCount=7,
+)
+call_formatter = logging.Formatter("%(asctime)s - %(message)s")
+call_handler.setFormatter(call_formatter)
+call_handler.setLevel(logging.DEBUG)
+call_logger.addHandler(call_handler)

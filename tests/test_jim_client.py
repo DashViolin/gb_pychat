@@ -1,14 +1,14 @@
 from http import HTTPStatus
 from unittest import TestCase, mock
 
-from common import config
+import config
 from common.jim_protocol.jim_base import Actions, Keys
 from common.jim_protocol.jim_client import JIMClient
 
 
 class TestJIMClient(TestCase):
     def setUp(self):
-        self.encoding = config.Common.ENCODING
+        self.encoding = config.CommonConf.ENCODING
         self.username = "user"
         self.mock_time = {Keys.TIME: 0}
         self.mock_resp = {Keys.RESPONSE: HTTPStatus.OK.value, Keys.ALERT: HTTPStatus.OK.phrase}
