@@ -4,8 +4,6 @@ import pathlib
 
 
 class Common:
-    # Из методички: "Итоговое ограничение для JSON-объекта - 640 символов",
-    # вольная трактовка - учитываем возможную двухбайтную кодировку:
     MAX_PACKAGE_LENGTH = 640 * 2
     ENCODING = "utf-8"
     DEFAULT_PORT = 7777
@@ -20,7 +18,7 @@ class Server:
     MAIN_LOGGER_LEVEL = logging.DEBUG
     MAIN_LOGGER_FORMAT = "%(asctime)s - %(levelname)s - %(module)s - %(message)s"
     LOG_FILE_PATH = Common.LOGS_DIR / "server.main.log"
-    LOG_FILE_LEVEL = logging.ERROR
+    LOG_FILE_LEVEL = logging.DEBUG
     CONSOLE_LOG_LEVEL = logging.DEBUG
 
 
@@ -30,7 +28,7 @@ class Client:
     MAIN_LOGGER_LEVEL = logging.DEBUG
     MAIN_LOGGER_FORMAT = "%(asctime)s - %(levelname)s - %(module)s - %(message)s"
     LOG_FILE_PATH = Common.LOGS_DIR / "client.main.log"
-    LOG_FILE_LEVEL = logging.ERROR
+    LOG_FILE_LEVEL = logging.DEBUG
     CONSOLE_LOG_LEVEL = logging.DEBUG
 
 

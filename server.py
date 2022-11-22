@@ -58,6 +58,7 @@ def run_server():
             try:
                 msg = jim_server.recv()
                 jim_server.validate_msg(msg)
+                logger.debug(f"Принято сообщение: {msg}")
                 print_msg(msg, jim_server.addr)
                 response = jim_server.make_response_msg(HTTPStatus.OK)
                 logger.debug(f"Отправлен ответ {response} клиенту {':'.join(map(str, jim_server.addr))}")

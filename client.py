@@ -66,6 +66,7 @@ def main():
 
                 msg = jim_client.make_msg("user_dest", msg_text)
                 response = jim_client.send_msg(msg)
+                logger.debug(f"Отправлено сообщение: {msg}")
                 jim_client.validate_msg(response)
                 logger.debug(f"Получен ответ от сервера: {response}")
             except (NonDictInputError, IncorrectDataRecivedError, ReqiuredFieldMissingError) as ex:
