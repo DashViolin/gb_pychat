@@ -1,28 +1,38 @@
 import logging
-from logging.handlers import TimedRotatingFileHandler
+from logging.handlers import RotatingFileHandler, TimedRotatingFileHandler
 
-from common.config import Common, Server
+from config import CommonConf, ServerConf
 
-logger = logging.getLogger(Server.MAIN_LOGGER_NAME)
-formatter = logging.Formatter(Server.MAIN_LOGGER_FORMAT)
-logger.setLevel(Server.MAIN_LOGGER_LEVEL)
+main_logger = logging.getLogger("server.main")
+main_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(module)s - %(message)s")
+main_logger.setLevel(logging.DEBUG)
 
 file_handler = TimedRotatingFileHandler(
-    filename=Server.LOG_FILE_PATH,
-    encoding=Common.ENCODING,
+    filename=ServerConf.MAIN_LOG_FILE_PATH,
+    encoding=CommonConf.ENCODING,
     when="D",
     interval=1,
     backupCount=7,
 )
-file_handler.setLevel(Server.LOG_FILE_LEVEL)
-file_handler.setFormatter(formatter)
+file_handler.setLevel(logging.WARNING)
+file_handler.setFormatter(main_formatter)
+main_logger.addHandler(file_handler)
 
 console_handler = logging.StreamHandler()
-console_handler.setLevel(Server.CONSOLE_LOG_LEVEL)
-console_handler.setFormatter(formatter)
+console_handler.setLevel(logging.INFO)
+console_handler.setFormatter(main_formatter)
+main_logger.addHandler(console_handler)
 
-logger.addHandler(console_handler)
-logger.addHandler(file_handler)
 
-if __name__ == "__main__":
-    logger.info("Тестовый запуск логирования")
+call_logger = logging.getLogger("server.calls")
+call_logger.setLevel(logging.DEBUG)
+call_handler = RotatingFileHandler(
+    filename=ServerConf.CALL_LOG_FILE_PATH,
+    maxBytes=1024 * 10,  # 10 KiB
+    backupCount=7,
+    encoding=CommonConf.ENCODING,
+)
+call_formatter = logging.Formatter("%(asctime)s - %(message)s")
+call_handler.setFormatter(call_formatter)
+call_handler.setLevel(logging.DEBUG)
+call_logger.addHandler(call_handler)

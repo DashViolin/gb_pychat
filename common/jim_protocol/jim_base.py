@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from json import JSONDecodeError
 
-from common import config
+import config
 
 from .errors import IncorrectDataRecivedError, NonDictInputError, ReqiuredFieldMissingError
 
@@ -60,8 +60,8 @@ class JIMValidationSchema:
 
 class JIMBase:
     def __init__(self) -> None:
-        self.encoding = config.Common.ENCODING
-        self.package_length = config.Common.MAX_PACKAGE_LENGTH
+        self.encoding = config.CommonConf.ENCODING
+        self.package_length = config.CommonConf.MAX_PACKAGE_LENGTH
         self.schema = JIMValidationSchema()
 
     @abstractmethod
