@@ -1,12 +1,14 @@
 import argparse
 import sys
+from http import HTTPStatus
 from time import sleep
 
-from common.jim_protocol.errors import IncorrectDataRecivedError, NonDictInputError, ReqiuredFieldMissingError
-from common.jim_protocol.jim_client import JIMClient
 from config import ClientConf, CommonConf
-from log.client_log_config import call_logger, main_logger
-from log.decorator import log
+from jim.base import Keys
+from jim.client import JIMClient
+from jim.errors import IncorrectDataRecivedError, NonDictInputError, ReqiuredFieldMissingError
+from logger.client_log_config import call_logger, main_logger
+from logger.decorator import log
 
 
 @log(call_logger)
@@ -29,59 +31,58 @@ def parse_args():
         type=type(CommonConf.DEFAULT_PORT),
         default=CommonConf.DEFAULT_PORT,
     )
+    parser.add_argument(
+        "-u",
+        "--user",
+        help="Username",
+        type=str,
+        default="guest",
+    )
+    parser.add_argument(
+        "-r",
+        "--reader",
+        help="Reader working mode, for data recieve only",
+        type=bool,
+        action=argparse.BooleanOptionalAction,
+    )
     args = parser.parse_args()
     if not 1023 < args.port < 65536:
         main_logger.critical(
             f"Попытка запуска клиента с неподходящим номером порта: {args.port}. Допустимы адреса с 1024 до 65535."
         )
         sys.exit(1)
-    return args.address, args.port
-
-
-@log(call_logger)
-def main():
-    conn_params = parse_args()
-    username = "user"
-    with JIMClient(conn_params, username) as jim_client:
-        while True:
-            try:
-                conn_is_ok, response = jim_client.connect()
-                if conn_is_ok:
-                    break
-            except ConnectionRefusedError:
-                main_logger.info(f"Пытаюсь подключиться как {username} к серверу {':'.join(map(str, conn_params))}...")
-                sleep(1)
-
-        try:
-            jim_client.validate_msg(response)
-            main_logger.debug(f"Получен ответ от сервера: {response}")
-        except (NonDictInputError, IncorrectDataRecivedError, ReqiuredFieldMissingError) as ex:
-            main_logger.error(ex)
-
-        main_logger.info(f"Успешно подключен к серверу {':'.join(map(str, conn_params))} от имени {username}")
-        while True:
-            try:
-                msg_text = str(input("Введите текст (или exit для выхода): "))
-                if msg_text.strip() == CommonConf.EXIT_WORD:
-                    quit = jim_client.make_quit_msg()
-                    response = jim_client.send_msg(quit)
-                    jim_client.validate_msg(response)
-                    main_logger.info(f"Получен ответ от сервера: {response}")
-                    jim_client.close()
-                    break
-
-                msg = jim_client.make_msg("user_dest", msg_text)
-                response = jim_client.send_msg(msg)
-                jim_client.validate_msg(response)
-                main_logger.info(f"Получен ответ от сервера: {response}")
-            except (NonDictInputError, IncorrectDataRecivedError, ReqiuredFieldMissingError) as ex:
-                main_logger.error(ex)
+    return args.reader, args.user, args.address, args.port
 
 
 if __name__ == "__main__":
     try:
         main_logger.info("Приложение запущено.")
-        main()
+        is_reader, username, *conn_params = parse_args()
+        with JIMClient(tuple(conn_params), username=username, mode=is_reader) as jim_client:
+            while True:
+                server_name = ":".join(map(str, conn_params))
+                try:
+                    response = jim_client.connect()
+                    jim_client.validate_msg(response)
+                    main_logger.debug(f"Получен ответ от сервера: {response}")
+                    match response[Keys.RESPONSE]:
+                        case HTTPStatus.OK:
+                            main_logger.info(f"Успешно подключен к серверу {server_name} от имени {username}")
+                            break
+                        case HTTPStatus.FORBIDDEN:
+                            main_logger.warning(f"Сервер {server_name} отказал в подключении: {response}")
+                            raise KeyboardInterrupt
+                        case _:
+                            pass
+                except (NonDictInputError, IncorrectDataRecivedError, ReqiuredFieldMissingError) as ex:
+                    main_logger.info(f"Не удалось подключиться от имени {username} к серверу {server_name} ({str(ex)})")
+                    raise KeyboardInterrupt
+                except ConnectionRefusedError as ex:
+                    main_logger.info(f"Пытаюсь подключиться как {username} к серверу {server_name}...")
+                    sleep(1)
+
+            jim_client.mainloop()
+
     except KeyboardInterrupt:
         main_logger.info("Работа клиента была принудительно завершена.")
         sys.exit(0)

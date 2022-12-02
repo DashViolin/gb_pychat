@@ -1,12 +1,25 @@
+import os
+import pathlib
+from collections import defaultdict
+from copy import deepcopy
 from http import HTTPStatus
 from unittest import TestCase, mock
 
-from common.jim_protocol.jim_base import Actions, Keys
-from common.jim_protocol.jim_server import JIMServer
+from jim.base import Actions, Keys
+from jim.errors import IncorrectDataRecivedError, NonDictInputError, ReqiuredFieldMissingError
+from jim.server import JIMServer
 
 
 class BaseServerTestCase(TestCase):
     def setUp(self):
+        def make_client(ret_msg: dict):
+            client = mock.Mock()
+            client.close.return_value = None
+            client.send.return_value = None
+            client.getpeername.return_value = "mock_peer_name"
+            client.recv.return_value = self.server._dump_msg(ret_msg)
+            return client
+
         self.mock_time = {Keys.TIME: 0}
         conn_params = ("127.0.0.1", 7777)
         self.server = JIMServer(conn_params)
@@ -16,12 +29,60 @@ class BaseServerTestCase(TestCase):
         self.server.sock.bind.return_value = None
         self.server.sock.accept.return_value = (mock.Mock(), ("192.168.1.1", 33333))
         self.server.listen()
+
+        self.mock_presense = {Keys.ACTION: Actions.PRESENCE, Keys.USER: {Keys.ACCOUNT_NAME: "user", Keys.STATUS: ""}}
+
+        self.client1 = make_client(self.mock_presense)
+        self.client2 = make_client({})
+        self.users = ["user1", "user2"]
+        self.connections = [
+            self.client1,
+            self.client2,
+        ]
+        self.mock_active_clients = {
+            self.users[0]: self.client1,
+            self.users[1]: self.client2,
+        }
+        self.mock_messages_queue = defaultdict(
+            list,
+            {
+                user: [
+                    {"field1": "message"},
+                    {"field2": "message"},
+                ]
+                for user in self.mock_active_clients.keys()
+            },
+        )
+
         return super().setUp()
 
 
 class TestJIMBase(BaseServerTestCase):
     def setUp(self):
         return super().setUp()
+
+    def test_validate_msg_ok(self):
+        result = True
+        try:
+            self.server.validate_msg(self.mock_presense)
+        except Exception:
+            result = False
+        finally:
+            self.assertTrue(result)
+
+    def test_validate_msg_non_dict(self):
+        arg = [1, 2, 3]
+        self.assertRaises(NonDictInputError, self.server.validate_msg, arg)
+
+    def test_validate_msg_incorrect_data_error(self):
+        arg = deepcopy(self.mock_presense)
+        arg.pop(Keys.ACTION)
+        self.assertRaises(IncorrectDataRecivedError, self.server.validate_msg, arg)
+
+    def test_validate_msg_missing_key_error(self):
+        arg = deepcopy(self.mock_presense)
+        arg.pop(Keys.TIME)
+        self.assertRaises(ReqiuredFieldMissingError, self.server.validate_msg, arg)
 
     def test_from_timestamp(self):
         iso_time_orig = "1970-01-01T03:00:00"
@@ -40,21 +101,72 @@ class TestJIMServer(BaseServerTestCase):
     def setUp(self):
         return super().setUp()
 
-    def test_recv(self):
-        client_presence = {Keys.ACTION: Actions.PRESENCE, Keys.USER: {Keys.ACCOUNT_NAME: "user", Keys.STATUS: ""}}
-        self.server.client.recv.return_value = self.server._dump_msg(client_presence)
-        msg = self.server.recv()
-        msg.update(self.mock_time)
-        client_presence.update(self.mock_time)
-        self.assertEqual(client_presence, msg)
+    def test_disconnect_client(self):
+        user = self.users[0]
+        conn = self.mock_active_clients[user]
+        active_clients_result = self.mock_active_clients.copy()
+        active_clients_result.pop(user)
+        connections_result = self.connections.copy()
+        connections_result.remove(conn)
+        self.server.active_clients = self.mock_active_clients.copy()
+        self.server.connections = self.connections.copy()
+        self.server._disconnect_client(user=user, conn=conn)
+        self.assertEqual(self.server.active_clients, active_clients_result)
+        self.assertEqual(self.server.connections, connections_result)
 
-    # def test_close(self): pass  # nothing to test
+    def test_cleanup_disconnected_users(self):
+        disconnected_user = self.users[-1]
+        active_clients = deepcopy(self.mock_active_clients)
+        self.server.active_clients = active_clients.copy()
+        active_clients.pop(disconnected_user)
+        with mock.patch.object(
+            self.server.active_clients[disconnected_user], "getpeername", mock.MagicMock(side_effect=OSError)
+        ):
+            self.server._cleanup_disconnected_users()
+        self.assertEqual(self.server.active_clients, active_clients)
 
-    # def test_send(self): pass  # nothing to test
+    def test_process_messages_queue(self):
+        self.server.messages_queue = deepcopy(self.mock_messages_queue)
+        self.server.active_clients = deepcopy(self.mock_active_clients)
+        self.server._process_messages_queue()
+        for user in self.server.messages_queue:
+            self.assertEqual(self.server.messages_queue[user], [])
+
+    def test_dump_and_load_messages(self):
+        tmp_dump_file_path = pathlib.Path().resolve() / "tmp_dump_file.json"
+        if tmp_dump_file_path.exists():
+            os.remove(tmp_dump_file_path)
+        self.server.messages_queue = deepcopy(self.mock_messages_queue)
+        self.server.dump_messages(dump_file_path=tmp_dump_file_path)
+        self.server.load_messages(dump_file_path=tmp_dump_file_path)
+        if tmp_dump_file_path.exists():
+            os.remove(tmp_dump_file_path)
+        self.assertEqual(self.server.messages_queue, self.mock_messages_queue)
+
+    def test_recv_presense(self):
+        msg = self.server._recv(self.client1)
+        if msg:
+            msg.update(self.mock_time)
+            client_presence = deepcopy(self.mock_presense)
+            client_presence.update(self.mock_time)
+            self.assertEqual(client_presence, msg)
+        else:
+            self.assertEqual(None, msg)
+
+    def test_recv_none(self):
+        self.client1.recv.return_value = b""
+        msg = self.server._recv(self.client1)
+        if msg:
+            msg.update(self.mock_time)
+            client_presence = deepcopy(self.mock_presense)
+            client_presence.update(self.mock_time)
+            self.assertEqual(client_presence, msg)
+        else:
+            self.assertEqual(None, msg)
 
     def test_make_probe_msg(self):
         probe_msg_orig = {Keys.ACTION: Actions.PROBE}
-        probe_msg = self.server.make_probe_msg()
+        probe_msg = self.server._make_probe_msg()
         self.assertEqual(probe_msg, probe_msg_orig)
 
     def test_make_response_msg_ok(self):
@@ -62,7 +174,7 @@ class TestJIMServer(BaseServerTestCase):
             Keys.RESPONSE: HTTPStatus.OK,
             Keys.ALERT: HTTPStatus.OK.phrase,
         }
-        response_msg = self.server.make_response_msg(code=HTTPStatus.OK)
+        response_msg = self.server._make_response_msg(code=HTTPStatus.OK)
         self.assertEqual(response_msg, response_orig)
 
     def test_make_response_msg_403(self):
@@ -70,7 +182,7 @@ class TestJIMServer(BaseServerTestCase):
             Keys.RESPONSE: HTTPStatus.FORBIDDEN,
             Keys.ERROR: HTTPStatus.FORBIDDEN.phrase,
         }
-        response_msg = self.server.make_response_msg(code=HTTPStatus.FORBIDDEN)
+        response_msg = self.server._make_response_msg(code=HTTPStatus.FORBIDDEN)
         self.assertEqual(response_msg, response_orig)
 
     def test_make_response_msg_error_with_descr(self):
@@ -79,5 +191,5 @@ class TestJIMServer(BaseServerTestCase):
             Keys.RESPONSE: HTTPStatus.INTERNAL_SERVER_ERROR,
             Keys.ERROR: descr,
         }
-        response_msg = self.server.make_response_msg(code=HTTPStatus.INTERNAL_SERVER_ERROR, description=descr)
+        response_msg = self.server._make_response_msg(code=HTTPStatus.INTERNAL_SERVER_ERROR, description=descr)
         self.assertEqual(response_msg, response_orig)

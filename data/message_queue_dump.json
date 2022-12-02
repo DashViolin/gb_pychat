@@ -1,0 +1,18 @@
+{
+  "user1": [
+    {
+      "field1": "message"
+    },
+    {
+      "field2": "message"
+    }
+  ],
+  "user2": [
+    {
+      "field1": "message"
+    },
+    {
+      "field2": "message"
+    }
+  ]
+}

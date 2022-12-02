@@ -69,7 +69,7 @@ class JIMBase:
         pass
 
     def _validate_keys(self, schema_keys: set, msg: dict):
-        missing = schema_keys - msg.keys()
+        missing = schema_keys - set(msg.keys())
         if missing:
             raise ReqiuredFieldMissingError(missing_fields=missing)
 
