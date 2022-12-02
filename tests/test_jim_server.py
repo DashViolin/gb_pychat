@@ -22,8 +22,10 @@ class BaseServerTestCase(TestCase):
 
         self.mock_time = {Keys.TIME: 0}
         conn_params = ("127.0.0.1", 7777)
+        self.msg_queue_dump_file = pathlib.Path().resolve() / "tmp_dump_file.json"
         self.server = JIMServer(conn_params)
         self.server.close()
+        self.server.msg_queue_dump_file = self.msg_queue_dump_file
         self.server.sock = mock.Mock()
         self.server.sock.listen.return_value = None
         self.server.sock.bind.return_value = None
@@ -53,8 +55,12 @@ class BaseServerTestCase(TestCase):
                 for user in self.mock_active_clients.keys()
             },
         )
-
         return super().setUp()
+
+    def tearDown(self) -> None:
+        if self.msg_queue_dump_file.exists():
+            os.remove(self.msg_queue_dump_file)
+        return super().tearDown()
 
 
 class TestJIMBase(BaseServerTestCase):
@@ -133,14 +139,9 @@ class TestJIMServer(BaseServerTestCase):
             self.assertEqual(self.server.messages_queue[user], [])
 
     def test_dump_and_load_messages(self):
-        tmp_dump_file_path = pathlib.Path().resolve() / "tmp_dump_file.json"
-        if tmp_dump_file_path.exists():
-            os.remove(tmp_dump_file_path)
         self.server.messages_queue = deepcopy(self.mock_messages_queue)
-        self.server.dump_messages(dump_file_path=tmp_dump_file_path)
-        self.server.load_messages(dump_file_path=tmp_dump_file_path)
-        if tmp_dump_file_path.exists():
-            os.remove(tmp_dump_file_path)
+        self.server.dump_messages()
+        self.server.load_messages()
         self.assertEqual(self.server.messages_queue, self.mock_messages_queue)
 
     def test_recv_presense(self):

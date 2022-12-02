@@ -39,18 +39,14 @@ class JIMServer(JIMBase, ContextDecorator):
         self.close()
 
     @log(call_logger)
-    def dump_messages(self, dump_file_path=None):
-        if not dump_file_path:
-            dump_file_path = self.msg_queue_dump_file
+    def dump_messages(self):
         if self.messages_queue:
             with open(self.msg_queue_dump_file, "w", encoding=config.CommonConf.ENCODING) as dump:
                 json.dump(self.messages_queue, dump, ensure_ascii=False, indent=2)
                 main_logger.info(f"Сообщения сохранены в файл {self.msg_queue_dump_file}")
 
     @log(call_logger)
-    def load_messages(self, dump_file_path=None) -> defaultdict:
-        if not dump_file_path:
-            dump_file_path = self.msg_queue_dump_file
+    def load_messages(self) -> defaultdict:
         if self.msg_queue_dump_file.exists():
             with open(self.msg_queue_dump_file, "r", encoding=config.CommonConf.ENCODING) as dump:
                 messages_queue = defaultdict(list, json.load(dump))
