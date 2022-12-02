@@ -1,4 +1,0 @@
-2022-12-02 09:47:56,218 - CRITICAL - client - [Errno 106] Transport endpoint is already connected
-2022-12-02 09:57:18,763 - CRITICAL - client - [Errno 106] Transport endpoint is already connected
-2022-12-02 09:58:45,046 - CRITICAL - client - Принято некорректное сообщение от удалённого компьютера.
-2022-12-02 16:54:40,030 - WARNING - client - Сервер 127.0.0.1:7777 отказал в подключении: {'response': 403, 'error': 'Клиент с таким именем уже зарегистрирован на сервере', 'time': '2022-12-02T16:54:40.029603'}
