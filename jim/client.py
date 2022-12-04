@@ -1,18 +1,20 @@
 from contextlib import ContextDecorator
-from http import HTTPStatus
 from socket import AF_INET, SOCK_STREAM, socket
 
-from log.client_log_config import call_logger, main_logger
-from log.decorator import log
+import config
+from logger.client_log_config import call_logger, main_logger
+from logger.decorator import log
 
-from .jim_base import Actions, JIMBase, Keys
+from .base import Actions, JIMBase, Keys
+from .errors import IncorrectDataRecivedError, NonDictInputError, ReqiuredFieldMissingError
 
 
 class JIMClient(JIMBase, ContextDecorator):
     @log(call_logger)
-    def __init__(self, conn_params, username) -> None:
-        self.username = username
+    def __init__(self, conn_params, mode, username) -> None:
+        self.is_reader = mode
         self.conn_params = conn_params
+        self.username = username
         self.sock = socket(AF_INET, SOCK_STREAM)
         super().__init__()
 
@@ -32,19 +34,56 @@ class JIMClient(JIMBase, ContextDecorator):
     def connect(self):
         self.sock.connect(self.conn_params)
         presense = self.make_presence_msg()
-        response = self.send_msg(presense)
-        if response.get(Keys.RESPONSE) == HTTPStatus.OK:
-            return True, response
-        return False, response
+        response = self.send(presense)
+        return response
 
     @log(call_logger)
     def close(self):
         self.sock.close()
 
     @log(call_logger)
-    def send_msg(self, msg: dict):
+    def mainloop(self):
+        if self.is_reader:
+            self._start_reader_loop()
+        else:
+            self._start_writer_loop()
+
+    @log(call_logger)
+    def _start_writer_loop(self):
+        while True:
+            try:
+                username = str(input("Введите имя адресата: "))
+                msg_text = str(input(f"Введите текст (или '{config.CommonConf.EXIT_WORD}' для выхода): "))
+                if msg_text.strip() == config.CommonConf.EXIT_WORD:
+                    quit = self.make_quit_msg()
+                    response = self.send(quit)
+                    self.validate_msg(response)
+                    main_logger.info(f"Получен ответ от сервера: {response}")
+                    self.close()
+                    break
+
+                msg = self.make_msg(username, msg_text)
+                response = self.send(msg)
+                self.validate_msg(response)
+                main_logger.info(f"Получен ответ от сервера: {response}")
+            except (NonDictInputError, IncorrectDataRecivedError, ReqiuredFieldMissingError) as ex:
+                main_logger.error(ex)
+
+    @log(call_logger)
+    def _start_reader_loop(self):
+        while True:
+            msg = self._recv()
+            self.validate_msg(msg)
+            main_logger.info(f"Получено сообщение: {msg}")
+
+    @log(call_logger)
+    def send(self, msg: dict):
         msg_raw_data = self._dump_msg(msg)
         self.sock.send(msg_raw_data)
+        return self._recv()
+
+    @log(call_logger)
+    def _recv(self) -> dict:
         raw_resp_data = self.sock.recv(self.package_length)
         return self._load_msg(raw_resp_data)
 

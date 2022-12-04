@@ -28,7 +28,7 @@ call_logger = logging.getLogger("server.calls")
 call_logger.setLevel(logging.DEBUG)
 call_handler = RotatingFileHandler(
     filename=ServerConf.CALL_LOG_FILE_PATH,
-    maxBytes=1024 * 10,  # 10 KiB
+    maxBytes=1024 * 100000,  # 100000 KiB
     backupCount=7,
     encoding=CommonConf.ENCODING,
 )

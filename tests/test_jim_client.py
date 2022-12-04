@@ -1,9 +1,10 @@
+from copy import deepcopy
 from http import HTTPStatus
 from unittest import TestCase, mock
 
 import config
-from common.jim_protocol.jim_base import Actions, Keys
-from common.jim_protocol.jim_client import JIMClient
+from jim.base import Actions, Keys
+from jim.client import JIMClient
 
 
 class TestJIMClient(TestCase):
@@ -13,8 +14,9 @@ class TestJIMClient(TestCase):
         self.mock_time = {Keys.TIME: 0}
         self.mock_resp = {Keys.RESPONSE: HTTPStatus.OK.value, Keys.ALERT: HTTPStatus.OK.phrase}
         self.mock_resp.update(self.mock_time)
+        is_reader = "True"
         conn_params = ("127.0.0.1", 7777)
-        self.client = JIMClient(conn_params, self.username)
+        self.client = JIMClient(mode=is_reader, conn_params=conn_params, username=self.username)
         self.client.close()
         self.client.sock = mock.Mock()
         self.client.sock.connect.return_value = None
@@ -23,15 +25,22 @@ class TestJIMClient(TestCase):
         return super().setUp()
 
     def test_connect(self):
-        conn_is_ok, response = self.client.connect()
+        response = self.client.connect()
         response.update(self.mock_time)
-        self.assertEqual((conn_is_ok, response), (True, self.mock_resp))
+        self.assertEqual(response, self.mock_resp)
 
-    def test_send_msg(self):
+    def test_send(self):
         msg = {"test_key": "test_msg"}
-        response = self.client.send_msg(msg)
+        response = self.client.send(msg)
         response.update(self.mock_time)
         self.assertEqual(self.mock_resp, response)
+
+    def test_recv(self):
+        resp_orig = deepcopy(self.mock_resp)
+        resp_orig.update(self.mock_time)
+        resp = self.client._recv()
+        resp.update(self.mock_time)
+        self.assertEqual(resp, resp_orig)
 
     def test_make_presence_msg(self):
         status = "some_status"
