@@ -73,7 +73,7 @@ class JIMBase:
         if missing:
             raise ReqiuredFieldMissingError(missing_fields=missing)
 
-    def validate_msg(self, msg: dict):
+    def _validate_msg(self, msg: dict):
         if not isinstance(msg, dict):
             raise NonDictInputError()
         try:
