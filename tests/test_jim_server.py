@@ -30,7 +30,7 @@ class BaseServerTestCase(TestCase):
         self.server.sock.listen.return_value = None
         self.server.sock.bind.return_value = None
         self.server.sock.accept.return_value = (mock.Mock(), ("192.168.1.1", 33333))
-        self.server.listen()
+        self.server._listen()
 
         self.mock_presense = {Keys.ACTION: Actions.PRESENCE, Keys.USER: {Keys.ACCOUNT_NAME: "user", Keys.STATUS: ""}}
 
@@ -70,7 +70,7 @@ class TestJIMBase(BaseServerTestCase):
     def test_validate_msg_ok(self):
         result = True
         try:
-            self.server.validate_msg(self.mock_presense)
+            self.server._validate_msg(self.mock_presense)
         except Exception:
             result = False
         finally:
@@ -78,17 +78,17 @@ class TestJIMBase(BaseServerTestCase):
 
     def test_validate_msg_non_dict(self):
         arg = [1, 2, 3]
-        self.assertRaises(NonDictInputError, self.server.validate_msg, arg)
+        self.assertRaises(NonDictInputError, self.server._validate_msg, arg)
 
     def test_validate_msg_incorrect_data_error(self):
         arg = deepcopy(self.mock_presense)
         arg.pop(Keys.ACTION)
-        self.assertRaises(IncorrectDataRecivedError, self.server.validate_msg, arg)
+        self.assertRaises(IncorrectDataRecivedError, self.server._validate_msg, arg)
 
     def test_validate_msg_missing_key_error(self):
         arg = deepcopy(self.mock_presense)
         arg.pop(Keys.TIME)
-        self.assertRaises(ReqiuredFieldMissingError, self.server.validate_msg, arg)
+        self.assertRaises(ReqiuredFieldMissingError, self.server._validate_msg, arg)
 
     def test_from_timestamp(self):
         iso_time_orig = "1970-01-01T03:00:00"
@@ -140,8 +140,8 @@ class TestJIMServer(BaseServerTestCase):
 
     def test_dump_and_load_messages(self):
         self.server.messages_queue = deepcopy(self.mock_messages_queue)
-        self.server.dump_messages()
-        self.server.load_messages()
+        self.server._dump_messages()
+        self.server._load_messages()
         self.assertEqual(self.server.messages_queue, self.mock_messages_queue)
 
     def test_recv_presense(self):

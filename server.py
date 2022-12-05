@@ -1,6 +1,5 @@
 import argparse
 import sys
-from time import sleep
 
 from config import CommonConf, ServerConf
 from jim.server import JIMServer
@@ -42,15 +41,7 @@ if __name__ == "__main__":
     try:
         conn_params = parse_args()
         with JIMServer(conn_params) as jim_server:
-            while True:
-                try:
-                    jim_server.listen()
-                    break
-                except OSError:
-                    main_logger.info(f"Ожидается освобождение сокета {':'.join(map(str, conn_params))}...")
-                    sleep(1)
-
-            jim_server.mainloop()
+            jim_server.start_server()
     except KeyboardInterrupt:
         main_logger.info("Работа сервера была принудительно завершена.")
         sys.exit(0)

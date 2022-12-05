@@ -4,6 +4,7 @@ from contextlib import ContextDecorator
 from http import HTTPStatus
 from select import select
 from socket import AF_INET, SOCK_STREAM, socket
+from time import sleep
 
 import config
 from logger.decorator import log
@@ -23,7 +24,7 @@ class JIMServer(JIMBase, ContextDecorator):
         self.sock_timeout = 0.2
         self.connections = []
         self.active_clients = dict()
-        self.messages_queue = self.load_messages()
+        self.messages_queue = self._load_messages()
         super().__init__()
 
     def __str__(self):
@@ -39,14 +40,14 @@ class JIMServer(JIMBase, ContextDecorator):
         self.close()
 
     @log(call_logger)
-    def dump_messages(self):
+    def _dump_messages(self):
         if self.messages_queue:
             with open(self.msg_queue_dump_file, "w", encoding=config.CommonConf.ENCODING) as dump:
                 json.dump(self.messages_queue, dump, ensure_ascii=False, indent=2)
                 main_logger.info(f"Сообщения сохранены в файл {self.msg_queue_dump_file}")
 
     @log(call_logger)
-    def load_messages(self) -> defaultdict:
+    def _load_messages(self) -> defaultdict:
         if self.msg_queue_dump_file.exists():
             with open(self.msg_queue_dump_file, "r", encoding=config.CommonConf.ENCODING) as dump:
                 messages_queue = defaultdict(list, json.load(dump))
@@ -55,14 +56,25 @@ class JIMServer(JIMBase, ContextDecorator):
         return defaultdict(list)
 
     @log(call_logger)
-    def listen(self):
+    def _listen(self):
         self.sock.bind(self.conn_params)
         main_logger.info(f"Сервер запущен на {':'.join(map(str, self.conn_params))}.")
         self.sock.settimeout(self.sock_timeout)
         self.sock.listen(config.ServerConf.MAX_CONNECTIONS)
 
     @log(call_logger)
-    def mainloop(self):
+    def start_server(self):
+        while True:
+            try:
+                self._listen()
+                break
+            except OSError:
+                main_logger.info(f"Ожидается освобождение сокета {':'.join(map(str, self.conn_params))}...")
+                sleep(1)
+        self._mainloop()
+
+    @log(call_logger)
+    def _mainloop(self):
         while True:
             try:
                 conn, addr = self.sock.accept()
@@ -126,7 +138,7 @@ class JIMServer(JIMBase, ContextDecorator):
 
     @log(call_logger)
     def close(self):
-        self.dump_messages()
+        self._dump_messages()
         self.sock.close()
 
     @log(call_logger)
@@ -138,7 +150,7 @@ class JIMServer(JIMBase, ContextDecorator):
         msg = self._recv(client_conn)
         if msg:
             try:
-                self.validate_msg(msg)
+                self._validate_msg(msg)
                 match msg.get(Keys.ACTION):
                     case Actions.PRESENCE | Actions.AUTH:
                         client_username = msg[Keys.USER][Keys.ACCOUNT_NAME]
