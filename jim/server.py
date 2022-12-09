@@ -2,26 +2,46 @@ import json
 from collections import defaultdict
 from contextlib import ContextDecorator
 from http import HTTPStatus
+from ipaddress import ip_address
 from select import select
 from socket import AF_INET, SOCK_STREAM, socket
 from time import sleep
 
 import config
-from logger.decorator import log
-from logger.server_log_config import call_logger, main_logger
+from logger.server_log_config import main_logger
 
-from .base import Actions, JIMBase, Keys
+from .base import JIMBase
 from .errors import IncorrectDataRecivedError, NonDictInputError, ReqiuredFieldMissingError
+from .schema import Actions, Keys
+
+
+class PortDescriptor:
+    def __init__(self, value: int = 7777):
+        self.__set_port(value)
+
+    def __set_port(self, value: int):
+        if not 1023 < value < 65536:
+            raise ValueError("Номер порта должен быть положительным числом в диапазоне [1024, 65535].")
+        self._value = value
+
+    def __get__(self, instance, instance_type):
+        return self._value
+
+    def __set__(self, instance, value):
+        self.__set_port(value)
+
+    def __delete__(self, instance):
+        raise AttributeError("Невозможно удалить атрибут.")
 
 
 class JIMServer(JIMBase, ContextDecorator):
-    @log(call_logger)
-    def __init__(self, conn_params) -> None:
+    port = PortDescriptor()
+
+    def __init__(self, ip: str, port: int) -> None:
+        self.ip = ip_address(ip)
+        self.port = port
         self.sock = socket(AF_INET, SOCK_STREAM)
-        self.sock.setblocking(False)
         self.msg_queue_dump_file = config.ServerConf.MSG_DUMP_FILE
-        self.conn_params = conn_params
-        self.sock_timeout = 0.2
         self.connections = []
         self.active_clients = dict()
         self.messages_queue = self._load_messages()
@@ -30,23 +50,19 @@ class JIMServer(JIMBase, ContextDecorator):
     def __str__(self):
         return "JIM_server_object"
 
-    @log(call_logger)
     def __enter__(self):
         return self
 
-    @log(call_logger)
     def __exit__(self, *exc):
         main_logger.info("Закрываю соединение...")
         self.close()
 
-    @log(call_logger)
     def _dump_messages(self):
         if self.messages_queue:
             with open(self.msg_queue_dump_file, "w", encoding=config.CommonConf.ENCODING) as dump:
                 json.dump(self.messages_queue, dump, ensure_ascii=False, indent=2)
                 main_logger.info(f"Сообщения сохранены в файл {self.msg_queue_dump_file}")
 
-    @log(call_logger)
     def _load_messages(self) -> defaultdict:
         if self.msg_queue_dump_file.exists():
             with open(self.msg_queue_dump_file, "r", encoding=config.CommonConf.ENCODING) as dump:
@@ -55,25 +71,23 @@ class JIMServer(JIMBase, ContextDecorator):
                 return messages_queue
         return defaultdict(list)
 
-    @log(call_logger)
     def _listen(self):
-        self.sock.bind(self.conn_params)
-        main_logger.info(f"Сервер запущен на {':'.join(map(str, self.conn_params))}.")
-        self.sock.settimeout(self.sock_timeout)
+        self.sock.bind((str(self.ip), self.port))
+        self.sock.setblocking(False)
+        self.sock.settimeout(0.2)
         self.sock.listen(config.ServerConf.MAX_CONNECTIONS)
+        main_logger.info(f"Сервер запущен на {self.ip}:{self.port}.")
 
-    @log(call_logger)
     def start_server(self):
         while True:
             try:
                 self._listen()
                 break
             except OSError:
-                main_logger.info(f"Ожидается освобождение сокета {':'.join(map(str, self.conn_params))}...")
+                main_logger.info(f"Ожидается освобождение сокета {self.ip}:{self.port}...")
                 sleep(1)
         self._mainloop()
 
-    @log(call_logger)
     def _mainloop(self):
         while True:
             try:
@@ -97,7 +111,6 @@ class JIMServer(JIMBase, ContextDecorator):
                 self._cleanup_disconnected_users()
                 self._process_messages_queue()
 
-    @log(call_logger)
     def _process_messages_queue(self):
         active_users = set(self.messages_queue) & set(self.active_clients)
         for user in active_users:
@@ -111,7 +124,6 @@ class JIMServer(JIMBase, ContextDecorator):
                     self.messages_queue[user].append(msg)
                     break
 
-    @log(call_logger)
     def _cleanup_disconnected_users(self):
         disconnected_users = []
         for user, conn in self.active_clients.items():
@@ -122,7 +134,6 @@ class JIMServer(JIMBase, ContextDecorator):
         for user in disconnected_users:
             self.active_clients.pop(user)
 
-    @log(call_logger)
     def _disconnect_client(self, conn: socket, user: str | None = None):
         if user:
             try:
@@ -136,12 +147,10 @@ class JIMServer(JIMBase, ContextDecorator):
         conn.close()
         main_logger.info(f"Клиент отключился.")
 
-    @log(call_logger)
     def close(self):
         self._dump_messages()
         self.sock.close()
 
-    @log(call_logger)
     def _route_msg(self, client_conn: socket):
         response_code = HTTPStatus.OK
         response_descr = ""
@@ -190,7 +199,6 @@ class JIMServer(JIMBase, ContextDecorator):
                 if disconnect_client:
                     self._disconnect_client(client_conn)
 
-    @log(call_logger)
     def _recv(self, client) -> dict | None:
         msg = None
         try:
@@ -201,17 +209,14 @@ class JIMServer(JIMBase, ContextDecorator):
         finally:
             return msg
 
-    @log(call_logger)
     def _send(self, msg, client):
         msg_raw_data = self._dump_msg(msg)
         client.send(msg_raw_data)
 
-    @log(call_logger)
     def _make_probe_msg(self):
         msg = {Keys.ACTION: Actions.PROBE}
         return msg
 
-    @log(call_logger)
     def _make_response_msg(self, code: HTTPStatus, description: str = ""):
         description = description or code.phrase
         msg = {
