@@ -3,8 +3,8 @@ from http import HTTPStatus
 from unittest import TestCase, mock
 
 import config
-from jim.base import Actions, Keys
 from jim.client import JIMClient
+from jim.schema import Actions, Keys
 
 
 class TestJIMClient(TestCase):

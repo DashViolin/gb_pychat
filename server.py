@@ -39,12 +39,12 @@ def parse_args():
 if __name__ == "__main__":
     main_logger.info("Приложение запущено.")
     try:
-        conn_params = parse_args()
-        with JIMServer(conn_params) as jim_server:
+        ip, port = parse_args()
+        with JIMServer(ip, port) as jim_server:
             jim_server.start_server()
     except KeyboardInterrupt:
         main_logger.info("Работа сервера была принудительно завершена.")
         sys.exit(0)
-    except Exception as ex:
-        main_logger.critical(str(ex))
-        sys.exit(1)
+    # except Exception as ex:
+    #     main_logger.critical(str(ex))
+    #     sys.exit(1)

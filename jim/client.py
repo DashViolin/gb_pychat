@@ -5,15 +5,14 @@ from threading import Thread
 from time import sleep
 
 import config
-from logger.client_log_config import call_logger, main_logger
-from logger.decorator import log
+from logger.client_log_config import main_logger
 
-from .base import Actions, JIMBase, Keys
+from .base import JIMBase
 from .errors import IncorrectDataRecivedError, NonDictInputError, ReqiuredFieldMissingError
+from .schema import Actions, Keys
 
 
 class JIMClient(JIMBase, ContextDecorator):
-    @log(call_logger)
     def __init__(self, conn_params, username) -> None:
         self.conn_params = conn_params
         self.username = username
@@ -23,16 +22,13 @@ class JIMClient(JIMBase, ContextDecorator):
     def __str__(self):
         return f"JIM_client_object"
 
-    @log(call_logger)
     def __enter__(self):
         return self
 
-    @log(call_logger)
     def __exit__(self, *exc):
         main_logger.info("Закрываю соединение...")
         self.close()
 
-    @log(call_logger)
     def _connect(self):
         self.sock.connect(self.conn_params)
         presense = self._make_presence_msg()
@@ -40,11 +36,9 @@ class JIMClient(JIMBase, ContextDecorator):
         response = self._recv()
         return response
 
-    @log(call_logger)
     def close(self):
         self.sock.close()
 
-    @log(call_logger)
     def run(self):
         while True:
             server_name = ":".join(map(str, self.conn_params))
@@ -84,7 +78,6 @@ class JIMClient(JIMBase, ContextDecorator):
                 continue
             break
 
-    @log(call_logger)
     def _start_sender_loop(self):
         while True:
             try:
@@ -104,7 +97,6 @@ class JIMClient(JIMBase, ContextDecorator):
             except (NonDictInputError, IncorrectDataRecivedError, ReqiuredFieldMissingError) as ex:
                 main_logger.error(ex)
 
-    @log(call_logger)
     def _start_reciever_loop(self):
         while True:
             try:
@@ -117,7 +109,6 @@ class JIMClient(JIMBase, ContextDecorator):
                 main_logger.info("Соединение разорвано.")
                 break
 
-    @log(call_logger)
     def _process_msg(self, msg):
         if msg.get(Keys.ACTION) == Actions.MSG:
             user = msg[Keys.FROM]
@@ -134,22 +125,18 @@ class JIMClient(JIMBase, ContextDecorator):
         else:
             main_logger.error(f"Сообщение не распознано: {msg}")
 
-    @log(call_logger)
     def _send(self, msg: dict):
         msg_raw_data = self._dump_msg(msg)
         self.sock.send(msg_raw_data)
 
-    @log(call_logger)
     def _recv(self) -> dict:
         raw_resp_data = self.sock.recv(self.package_length)
         return self._load_msg(raw_resp_data)
 
-    @log(call_logger)
     def _make_presence_msg(self, status: str = ""):
         msg = {Keys.ACTION: Actions.PRESENCE, Keys.USER: {Keys.ACCOUNT_NAME: self.username, Keys.STATUS: status}}
         return msg
 
-    @log(call_logger)
     def _make_authenticate_msg(self, password: str):
         msg = {
             Keys.ACTION: Actions.AUTH,
@@ -157,14 +144,12 @@ class JIMClient(JIMBase, ContextDecorator):
         }
         return msg
 
-    @log(call_logger)
     def _make_quit_msg(self):
         msg = {
             Keys.ACTION: Actions.QUIT,
         }
         return msg
 
-    @log(call_logger)
     def _make_msg(self, user_or_room: str, message: str):
         msg = {
             Keys.ACTION: Actions.MSG,
@@ -175,13 +160,11 @@ class JIMClient(JIMBase, ContextDecorator):
         }
         return msg
 
-    @log(call_logger)
     def _make_join_room_msg(self, room_name: str):
         room_name = room_name if room_name.startswith("#") else f"#{room_name}"
         msg = {Keys.ACTION: Actions.JOIN, Keys.ROOM: room_name}
         return msg
 
-    @log(call_logger)
     def _make_leave_room_msg(self, room_name: str):
         room_name = room_name if room_name.startswith("#") else f"#{room_name}"
         msg = {Keys.ACTION: Actions.LEAVE, Keys.ROOM: room_name}

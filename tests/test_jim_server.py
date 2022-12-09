@@ -5,8 +5,8 @@ from copy import deepcopy
 from http import HTTPStatus
 from unittest import TestCase, mock
 
-from jim.base import Actions, Keys
 from jim.errors import IncorrectDataRecivedError, NonDictInputError, ReqiuredFieldMissingError
+from jim.schema import Actions, Keys
 from jim.server import JIMServer
 
 
@@ -21,9 +21,9 @@ class BaseServerTestCase(TestCase):
             return client
 
         self.mock_time = {Keys.TIME: 0}
-        conn_params = ("127.0.0.1", 7777)
         self.msg_queue_dump_file = pathlib.Path().resolve() / "tmp_dump_file.json"
-        self.server = JIMServer(conn_params)
+        ip, port = "127.0.0.1", 7777
+        self.server = JIMServer(ip, port)
         self.server.close()
         self.server.msg_queue_dump_file = self.msg_queue_dump_file
         self.server.sock = mock.Mock()
