@@ -1,6 +1,15 @@
+class ServerDisconnectError(Exception):
+    """
+    Исключение - сервер отключился
+    """
+
+    def __str__(self):
+        return "Потеряно соединение с сервером."
+
+
 class IncorrectDataRecivedError(Exception):
     """
-    Исключение  - некорректные данные получены от сокета
+    Исключение - некорректные данные получены от сокета
     """
 
     def __str__(self):

@@ -21,6 +21,14 @@
             "justMyCode": true
         },
         {
+            "name": "Launcher",
+            "type": "python",
+            "request": "launch",
+            "program": "./launcher.py",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
             "name": "Client u1",
             "type": "python",
             "request": "launch",

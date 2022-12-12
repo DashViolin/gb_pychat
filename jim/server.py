@@ -1,5 +1,3 @@
-import json
-from collections import defaultdict
 from contextlib import ContextDecorator
 from http import HTTPStatus
 from ipaddress import ip_address
@@ -13,6 +11,7 @@ from logger.server_log_config import main_logger
 from .base import JIMBase
 from .errors import IncorrectDataRecivedError, NonDictInputError, ReqiuredFieldMissingError
 from .schema import Actions, Keys
+from .server_storage import ServerStorage
 
 
 class PortDescriptor:
@@ -41,10 +40,9 @@ class JIMServer(JIMBase, ContextDecorator):
         self.ip = ip_address(ip)
         self.port = port
         self.sock = socket(AF_INET, SOCK_STREAM)
-        self.msg_queue_dump_file = config.ServerConf.MSG_DUMP_FILE
         self.connections = []
         self.active_clients = dict()
-        self.messages_queue = self._load_messages()
+        self.storage = ServerStorage()
         super().__init__()
 
     def __str__(self):
@@ -56,20 +54,6 @@ class JIMServer(JIMBase, ContextDecorator):
     def __exit__(self, *exc):
         main_logger.info("Закрываю соединение...")
         self.close()
-
-    def _dump_messages(self):
-        if self.messages_queue:
-            with open(self.msg_queue_dump_file, "w", encoding=config.CommonConf.ENCODING) as dump:
-                json.dump(self.messages_queue, dump, ensure_ascii=False, indent=2)
-                main_logger.info(f"Сообщения сохранены в файл {self.msg_queue_dump_file}")
-
-    def _load_messages(self) -> defaultdict:
-        if self.msg_queue_dump_file.exists():
-            with open(self.msg_queue_dump_file, "r", encoding=config.CommonConf.ENCODING) as dump:
-                messages_queue = defaultdict(list, json.load(dump))
-                main_logger.info(f"Сообщения загружены из файла {self.msg_queue_dump_file}")
-                return messages_queue
-        return defaultdict(list)
 
     def _listen(self):
         self.sock.bind((str(self.ip), self.port))
@@ -104,25 +88,23 @@ class JIMServer(JIMBase, ContextDecorator):
                         r_clients, _, _ = select(self.connections, self.connections, self.connections)
                 except OSError:
                     pass
-
                 for client in r_clients:
                     self._route_msg(client)
-
                 self._cleanup_disconnected_users()
                 self._process_messages_queue()
 
     def _process_messages_queue(self):
-        active_users = set(self.messages_queue) & set(self.active_clients)
+        active_users = self.storage.get_active_users()
         for user in active_users:
-            client = self.active_clients[user]
-            while self.messages_queue[user]:
-                msg = self.messages_queue[user].pop()
+            client_conn = self.active_clients[user]
+            for msg_id, msg in self.storage.get_user_messages(user_to=user):
                 try:
-                    self._send(msg=msg, client=client)
+                    self._send(msg=msg, client=client_conn)
                 except (OSError, ConnectionRefusedError, ConnectionResetError, BrokenPipeError):
-                    self._disconnect_client(conn=client, user=user)
-                    self.messages_queue[user].append(msg)
+                    self._disconnect_client(conn=client_conn, user=user)
                     break
+                else:
+                    self.storage.mark_msg_is_delivered(msg_id)
 
     def _cleanup_disconnected_users(self):
         disconnected_users = []
@@ -130,12 +112,13 @@ class JIMServer(JIMBase, ContextDecorator):
             try:
                 conn.getpeername()
             except OSError:
-                disconnected_users.append(user)
-        for user in disconnected_users:
-            self.active_clients.pop(user)
+                disconnected_users.append((conn, user))
+        for conn, user in disconnected_users:
+            self._disconnect_client(conn, user)
 
     def _disconnect_client(self, conn: socket, user: str | None = None):
         if user:
+            self.storage.set_user_is_active(username=user, is_active=False)
             try:
                 self.active_clients.pop(user)
             except KeyError:
@@ -148,13 +131,11 @@ class JIMServer(JIMBase, ContextDecorator):
         main_logger.info(f"Клиент отключился.")
 
     def close(self):
-        self._dump_messages()
         self.sock.close()
 
     def _route_msg(self, client_conn: socket):
         response_code = HTTPStatus.OK
         response_descr = ""
-        client_username = ""
         disconnect_client = False
         msg = self._recv(client_conn)
         if msg:
@@ -162,16 +143,21 @@ class JIMServer(JIMBase, ContextDecorator):
                 self._validate_msg(msg)
                 match msg.get(Keys.ACTION):
                     case Actions.PRESENCE | Actions.AUTH:
-                        client_username = msg[Keys.USER][Keys.ACCOUNT_NAME]
-                        if client_username not in self.active_clients:
-                            self.active_clients[client_username] = client_conn
+                        username = msg[Keys.USER][Keys.ACCOUNT_NAME]
+                        if username not in self.active_clients:
+                            self.active_clients[username] = client_conn
+                            passwd = msg[Keys.USER].get(Keys.PASSWORD)
+                            ip = client_conn.getpeername()[0]
+                            self.storage.register_user(username=username, password=passwd, ip_address=ip)
+                            self.storage.set_user_is_active(username=username)
                         else:
                             response_code = HTTPStatus.FORBIDDEN
                             response_descr = "Клиент с таким именем уже зарегистрирован на сервере"
                             disconnect_client = True
                     case Actions.MSG:
+                        username = msg[Keys.FROM]
                         target_user = msg[Keys.TO]
-                        self.messages_queue[target_user].append(msg)
+                        self.storage.store_msg(user_from=username, user_to=target_user, msg=msg)
                     case Actions.QUIT:
                         disconnect_client = True
                     case Actions.JOIN | Actions.LEAVE:
@@ -182,17 +168,15 @@ class JIMServer(JIMBase, ContextDecorator):
             except (NonDictInputError, IncorrectDataRecivedError) as ex:
                 response_code = HTTPStatus.INTERNAL_SERVER_ERROR
                 response_descr = str(ex)
-                main_logger.error(f"Принято некорректное сообщения от клиента {client_username}: {response_descr}")
+                main_logger.error(f"Принято некорректное сообщение: {response_descr}")
             except ReqiuredFieldMissingError as ex:
                 response_code = HTTPStatus.INTERNAL_SERVER_ERROR
                 response_descr = str(ex)
-                main_logger.error(
-                    f"Ошибка валидации сообщения. Клиент: {client_username}, сообщение: {msg} ({response_descr})"
-                )
+                main_logger.error(f"Ошибка валидации сообщения: {response_descr}")
             except Exception as ex:
                 response_code = HTTPStatus.INTERNAL_SERVER_ERROR
                 response_descr = str(ex)
-                main_logger.error(f"Непредвиденная ошибка. Клиент: {client_username}, исключение: {response_descr}")
+                main_logger.error(f"Непредвиденная ошибка: {response_descr}")
             finally:
                 response = self._make_response_msg(code=response_code, description=response_descr)
                 self._send(msg=response, client=client_conn)
