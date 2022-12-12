@@ -25,7 +25,6 @@ class BaseServerTestCase(TestCase):
         ip, port = "127.0.0.1", 7777
         self.server = JIMServer(ip, port)
         self.server.close()
-        self.server.msg_queue_dump_file = self.msg_queue_dump_file
         self.server.sock = mock.Mock()
         self.server.sock.listen.return_value = None
         self.server.sock.bind.return_value = None
@@ -130,19 +129,6 @@ class TestJIMServer(BaseServerTestCase):
         ):
             self.server._cleanup_disconnected_users()
         self.assertEqual(self.server.active_clients, active_clients)
-
-    def test_process_messages_queue(self):
-        self.server.messages_queue = deepcopy(self.mock_messages_queue)
-        self.server.active_clients = deepcopy(self.mock_active_clients)
-        self.server._process_messages_queue()
-        for user in self.server.messages_queue:
-            self.assertEqual(self.server.messages_queue[user], [])
-
-    def test_dump_and_load_messages(self):
-        self.server.messages_queue = deepcopy(self.mock_messages_queue)
-        self.server._dump_messages()
-        self.server._load_messages()
-        self.assertEqual(self.server.messages_queue, self.mock_messages_queue)
 
     def test_recv_presense(self):
         msg = self.server._recv(self.client1)

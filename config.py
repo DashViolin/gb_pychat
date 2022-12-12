@@ -12,10 +12,14 @@ class CommonConf:
 
 
 class ServerConf:
+    DB_CONFIG = {
+        "TEST_URL": "sqlite:///:memory:",
+        "URL": "sqlite:///data/jim_db.sqlite",
+        "USER": "",
+        "PSWD": "",
+    }
     DEFAULT_LISTENER_ADDRESS = "0.0.0.0"
     MAX_CONNECTIONS = 5
-    MSG_DATA_DIR = CommonConf.ROOT_DIR / "data"
-    MSG_DUMP_FILE = MSG_DATA_DIR / "message_queue_dump.json"
     MAIN_LOG_FILE_PATH = CommonConf.LOGS_DIR / "server.error.log"
     CALL_LOG_FILE_PATH = CommonConf.LOGS_DIR / "server.calls.log"
 

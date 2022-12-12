@@ -8,7 +8,7 @@ import config
 from logger.client_log_config import main_logger
 
 from .base import JIMBase
-from .errors import IncorrectDataRecivedError, NonDictInputError, ReqiuredFieldMissingError
+from .errors import IncorrectDataRecivedError, NonDictInputError, ReqiuredFieldMissingError, ServerDisconnectError
 from .schema import Actions, Keys
 
 
@@ -105,7 +105,7 @@ class JIMClient(JIMBase, ContextDecorator):
                 self._process_msg(msg)
             except (NonDictInputError, IncorrectDataRecivedError, ReqiuredFieldMissingError) as ex:
                 main_logger.error(ex)
-            except OSError:
+            except (OSError, ServerDisconnectError):
                 main_logger.info("Соединение разорвано.")
                 break
 
@@ -131,6 +131,8 @@ class JIMClient(JIMBase, ContextDecorator):
 
     def _recv(self) -> dict:
         raw_resp_data = self.sock.recv(self.package_length)
+        if not raw_resp_data:
+            raise ServerDisconnectError()
         return self._load_msg(raw_resp_data)
 
     def _make_presence_msg(self, status: str = ""):
