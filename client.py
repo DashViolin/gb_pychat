@@ -55,6 +55,6 @@ if __name__ == "__main__":
     except (ConnectionRefusedError, ConnectionResetError, BrokenPipeError) as ex:
         main_logger.warning(f"Произошел разрыв соединения ({ex})")
         sys.exit(0)
-    except Exception as ex:
-        main_logger.critical(str(ex))
-        sys.exit(1)
+    # except Exception as ex:
+    #     main_logger.critical(str(ex))
+    #     sys.exit(1)

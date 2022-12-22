@@ -11,12 +11,12 @@ file_handler = logging.FileHandler(
     ClientConf.MAIN_LOG_FILE_PATH,
     encoding=CommonConf.ENCODING,
 )
-file_handler.setLevel(logging.WARNING)
+file_handler.setLevel(logging.DEBUG)
 file_handler.setFormatter(formatter)
 main_logger.addHandler(file_handler)
 
 console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.INFO)
+console_handler.setLevel(logging.DEBUG)
 console_handler.setFormatter(formatter)
 main_logger.addHandler(console_handler)
 

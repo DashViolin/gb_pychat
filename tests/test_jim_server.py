@@ -151,6 +151,8 @@ class TestJIMServer(BaseServerTestCase):
     def test_make_probe_msg(self):
         probe_msg_orig = {Keys.ACTION: Actions.PROBE}
         probe_msg = self.server._make_probe_msg()
+        probe_msg_orig.update(self.mock_time)  # type: ignore
+        probe_msg.update(self.mock_time)  # type: ignore
         self.assertEqual(probe_msg, probe_msg_orig)
 
     def test_make_response_msg_ok(self):
@@ -159,6 +161,8 @@ class TestJIMServer(BaseServerTestCase):
             Keys.ALERT: HTTPStatus.OK.phrase,
         }
         response_msg = self.server._make_response_msg(code=HTTPStatus.OK)
+        response_orig.update(self.mock_time)  # type: ignore
+        response_msg.update(self.mock_time)  # type: ignore
         self.assertEqual(response_msg, response_orig)
 
     def test_make_response_msg_403(self):
@@ -167,6 +171,8 @@ class TestJIMServer(BaseServerTestCase):
             Keys.ERROR: HTTPStatus.FORBIDDEN.phrase,
         }
         response_msg = self.server._make_response_msg(code=HTTPStatus.FORBIDDEN)
+        response_orig.update(self.mock_time)  # type: ignore
+        response_msg.update(self.mock_time)  # type: ignore
         self.assertEqual(response_msg, response_orig)
 
     def test_make_response_msg_error_with_descr(self):
@@ -176,4 +182,6 @@ class TestJIMServer(BaseServerTestCase):
             Keys.ERROR: descr,
         }
         response_msg = self.server._make_response_msg(code=HTTPStatus.INTERNAL_SERVER_ERROR, description=descr)
+        response_orig.update(self.mock_time)  # type: ignore
+        response_msg.update(self.mock_time)  # type: ignore
         self.assertEqual(response_msg, response_orig)

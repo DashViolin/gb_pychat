@@ -30,7 +30,7 @@ class Message(Base):
 
 def init_db(username: str):
     db_path = CommonConf.DATA_DIR / f"jim_client_db_{username}.sqlite"
-    conn_string = f"sqlite:///{db_path}"
+    conn_string = f"sqlite:///{db_path}?check_same_thread=false&uri=true"
 
     engine = create_engine(conn_string, future=True, echo=False, pool_recycle=7200)
     if not db_path.exists():

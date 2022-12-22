@@ -1,5 +1,5 @@
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, create_engine
-from sqlalchemy.orm import declarative_base, relationship, sessionmaker
+from sqlalchemy.orm import backref, declarative_base, relationship, sessionmaker
 from sqlalchemy.sql import func
 
 from config import ServerConf
@@ -21,6 +21,9 @@ class Contact(Base):
     __table_args__ = (UniqueConstraint(user_id, contact_id),)
 
     messages = relationship("Message", backref="contact")
+
+    user = relationship("User", backref=backref("user", uselist=False), foreign_keys=[user_id])
+    contact = relationship("User", backref=backref("contact", uselist=False), foreign_keys=[contact_id])
 
 
 class Message(Base):

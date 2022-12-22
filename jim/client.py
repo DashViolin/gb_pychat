@@ -1,4 +1,5 @@
 from contextlib import ContextDecorator
+from datetime import datetime
 from http import HTTPStatus
 from ipaddress import ip_address
 from socket import AF_INET, SOCK_STREAM, socket
@@ -46,6 +47,7 @@ class JIMClient(JIMBase, ContextDecorator):
                 self.sock.connect((str(self.ip), self.port))
                 presense = self.msg_factory.make_presence_msg(status=self.status)
                 self._send(presense)
+                main_logger.debug(f"Отправлено сообщение: {presense}")
                 response = self._recv()
                 self._validate_msg(response)
                 main_logger.debug(f"Получен ответ от сервера: {response}")
@@ -67,25 +69,14 @@ class JIMClient(JIMBase, ContextDecorator):
                 main_logger.info(f"Пытаюсь подключиться как {self.username} к серверу {self.server_name}...")
                 sleep(1)
 
-    def _pull_contacts(self):
-        contacts_msg = self.msg_factory.make_get_contacts_msg()
-        self._send(contacts_msg)
-        response = self._recv()
-        self._validate_msg(response)
-        main_logger.debug(f"Получен ответ от сервера: {response}")
-        if response[Keys.RESPONSE] == HTTPStatus.ACCEPTED:
-            contacts = response[Keys.ALERT]
-            return contacts
-        return []
-
     def close(self):
         self.sock.close()
 
     def run(self):
         connected = self._connect()
         if connected:
-            contacts = self._pull_contacts()
-            self.storage.update_contacts(contacts)
+            contacts_msg = self.msg_factory.make_get_contacts_msg()
+            self.msg_queue.append(contacts_msg)
 
             receiver = Thread(target=self._start_reciever_loop)
             receiver.daemon = True
@@ -101,7 +92,7 @@ class JIMClient(JIMBase, ContextDecorator):
                     continue
                 break
 
-    def get_new_message(self):
+    def _get_new_message(self):
         try:
             username = str(input("Введите имя адресата: "))
             if username.strip():
@@ -113,12 +104,18 @@ class JIMClient(JIMBase, ContextDecorator):
                     raise KeyboardInterrupt
                 msg = self.msg_factory.make_msg(username, msg_text)
                 self.msg_queue.append(msg)
+                timestamp = self._from_iso_to_datetime(msg[Keys.TIME])
+                self.storage.store_msg(
+                    user_from=self.username, user_to=username, msg_text=msg_text, timestamp=timestamp
+                )
         except (NonDictInputError, IncorrectDataRecivedError, ReqiuredFieldMissingError) as ex:
             main_logger.error(ex)
 
+    def _show_message(self, sender: str, text: str):
+        print(f"\nПолучено сообщение от пользователя [{sender}]:\n{text}\n")
+
     def _start_sender_loop(self):
         while True:
-            self.get_new_message()
             if self.msg_queue:
                 try:
                     while self.msg_queue:
@@ -127,6 +124,7 @@ class JIMClient(JIMBase, ContextDecorator):
                         main_logger.debug(f"Отправлено сообщение: {msg}")
                 except Exception as ex:
                     main_logger.error(ex)
+            self._get_new_message()
 
     def _start_reciever_loop(self):
         while True:
@@ -137,6 +135,7 @@ class JIMClient(JIMBase, ContextDecorator):
                 except (NonDictInputError, IncorrectDataRecivedError, ReqiuredFieldMissingError) as ex:
                     main_logger.error(f"Принято некорректное сообщение: {msg} ({ex})")
                 else:
+                    main_logger.info(f"Принято сообщение: {msg}")
                     self._process_incoming_msg(msg)
             except (OSError, ServerDisconnectError):
                 main_logger.info("Соединение разорвано.")
@@ -149,6 +148,7 @@ class JIMClient(JIMBase, ContextDecorator):
             text = msg[Keys.MSG]
             timestamp = self._from_iso_to_datetime(msg[Keys.TIME])
             self.storage.store_msg(user_from=user_from, user_to=user_to, msg_text=text, timestamp=timestamp)
+            self._show_message(sender=user_from, text=text)
             main_logger.debug(f"Получено сообщение: {msg}")
         elif msg.get(Keys.ACTION) == Actions.PROBE:
             response = self.msg_factory.make_presence_msg(status=self.status)
@@ -157,6 +157,9 @@ class JIMClient(JIMBase, ContextDecorator):
         elif code := msg.get(Keys.RESPONSE):
             if code == HTTPStatus.OK:
                 main_logger.debug(f"Получен ответ от сервера: {msg}")
+            elif code == HTTPStatus.ACCEPTED:
+                contacts = msg[Keys.ALERT]
+                self.storage.update_contacts(contacts)
             else:
                 main_logger.error(f"Ошибка: {msg}")
         else:
@@ -182,8 +185,13 @@ class ClientMessages:
         self.username = username
         self.encoding = encoding
 
+    def _update_timestamp(self, msg: dict):
+        timestamp = {Keys.TIME: datetime.now().isoformat()}
+        msg.update(timestamp)
+
     def make_presence_msg(self, status: str = ""):
         msg = {Keys.ACTION: Actions.PRESENCE, Keys.USER: {Keys.ACCOUNT_NAME: self.username, Keys.STATUS: status}}
+        self._update_timestamp(msg=msg)
         return msg
 
     def make_authenticate_msg(self, password: str):
@@ -191,12 +199,14 @@ class ClientMessages:
             Keys.ACTION: Actions.AUTH,
             Keys.USER: {Keys.ACCOUNT_NAME: self.username, Keys.PASSWORD: password},
         }
+        self._update_timestamp(msg=msg)
         return msg
 
     def make_quit_msg(self):
         msg = {
             Keys.ACTION: Actions.QUIT,
         }
+        self._update_timestamp(msg=msg)
         return msg
 
     def make_msg(self, user_or_room: str, message: str):
@@ -207,26 +217,32 @@ class ClientMessages:
             Keys.MSG: message,
             Keys.ENCODING: self.encoding,
         }
+        self._update_timestamp(msg=msg)
         return msg
 
     def make_join_room_msg(self, room_name: str):
         room_name = room_name if room_name.startswith("#") else f"#{room_name}"
         msg = {Keys.ACTION: Actions.JOIN, Keys.ROOM: room_name}
+        self._update_timestamp(msg=msg)
         return msg
 
     def make_leave_room_msg(self, room_name: str):
         room_name = room_name if room_name.startswith("#") else f"#{room_name}"
         msg = {Keys.ACTION: Actions.LEAVE, Keys.ROOM: room_name}
+        self._update_timestamp(msg=msg)
         return msg
 
     def make_get_contacts_msg(self):
         msg = {Keys.ACTION: Actions.CONTACTS, Keys.ACCOUNT_NAME: self.username}
+        self._update_timestamp(msg=msg)
         return msg
 
     def make_add_contact_msg(self, contact: str):
         msg = {Keys.ACTION: Actions.ADD_CONTACT, Keys.ACCOUNT_NAME: self.username, Keys.CONTACT: contact}
+        self._update_timestamp(msg=msg)
         return msg
 
     def make_del_contact_msg(self, contact: str):
         msg = {Keys.ACTION: Actions.DEL_CONTACT, Keys.ACCOUNT_NAME: self.username, Keys.CONTACT: contact}
+        self._update_timestamp(msg=msg)
         return msg

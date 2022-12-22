@@ -45,6 +45,10 @@ class JIMBase(metaclass=JIMMeta):
     def _from_iso_to_datetime(self, iso_timestamp: str) -> datetime:
         return datetime.fromisoformat(iso_timestamp)
 
+    def _update_timestamp(self, msg: dict):
+        timestamp = {Keys.TIME: datetime.now().isoformat()}
+        msg.update(timestamp)
+
     def _dump_msg(self, msg: dict) -> bytes:
         timestamp = {Keys.TIME: datetime.now().timestamp()}
         msg.update(timestamp)

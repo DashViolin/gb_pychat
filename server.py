@@ -45,6 +45,6 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         main_logger.info("Работа сервера была принудительно завершена.")
         sys.exit(0)
-    # except Exception as ex:
-    #     main_logger.critical(str(ex))
-    #     sys.exit(1)
+    except Exception as ex:
+        main_logger.critical(str(ex))
+        sys.exit(1)

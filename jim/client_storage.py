@@ -66,7 +66,7 @@ class ClientStorage:
         try:
             messages = (
                 self.session.query(Message)
-                .filter_by(sender_id=sender.id, reciever_id=sender.id)
+                .filter_by(sender_id=sender.id, reciever_id=reciever.id)
                 .order_by(Message.timestamp.desc())
                 .all()
             )

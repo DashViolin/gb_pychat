@@ -144,6 +144,7 @@ class JIMServer(JIMBase, ContextDecorator):
                     case Actions.CONTACTS:
                         username = msg[Keys.ACCOUNT_NAME]
                         contacts = self.storage.get_user_contacts(username=username)
+                        response_code = HTTPStatus.ACCEPTED
                         response_descr = contacts
                     case Actions.ADD_CONTACT:
                         username = msg[Keys.ACCOUNT_NAME]
@@ -194,6 +195,7 @@ class JIMServer(JIMBase, ContextDecorator):
 
     def _make_probe_msg(self):
         msg = {Keys.ACTION: Actions.PROBE}
+        self._update_timestamp(msg=msg)
         return msg
 
     def _make_response_msg(self, code: HTTPStatus, description: str | list = ""):
@@ -202,4 +204,5 @@ class JIMServer(JIMBase, ContextDecorator):
             Keys.RESPONSE: code.value,
             Keys.ERROR if 400 <= code.value < 600 else Keys.ALERT: description,
         }
+        self._update_timestamp(msg=msg)
         return msg

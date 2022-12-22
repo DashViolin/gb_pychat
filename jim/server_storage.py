@@ -81,16 +81,11 @@ class ServerStorage:
     def get_user_contacts(self, username: str):
         try:
             user = self.session.query(User).filter_by(username=username).one()
-            contacts = (
-                self.session.query(Contact)
-                .join(User)
-                .filter(Contact.user_id == user.id and Contact.is_active == True)
-                .all()
-            )
+            contacts = self.session.query(Contact).filter_by(user_id=user.id, is_active=True).all()
         except NoResultFound:
             return []
         else:
-            return [contact.username for contact in contacts]
+            return [contact.contact.username for contact in contacts]
 
     def delete_contact(self, username: str, contact_name: str):
         try:
