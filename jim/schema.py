@@ -6,6 +6,7 @@ class Keys:
     ACTION = "action"
     TIME = "time"
     USER = "user"
+    CONTACT = "contact"
     ACCOUNT_NAME = "account_name"
     PASSWORD = "password"
     STATUS = "status"
@@ -23,6 +24,9 @@ class Keys:
 class Actions:
     AUTH = "authenticate"
     PRESENCE = "presence"
+    CONTACTS = "get_contacts"
+    ADD_CONTACT = "add_contact"
+    DEL_CONTACT = "del_contact"
     PROBE = "probe"
     QUIT = "quit"
     MSG = "msg"
@@ -40,6 +44,9 @@ class JIMValidationSchema:
         Actions.MSG: {Keys.ACTION, Keys.TIME, Keys.FROM, Keys.TO, Keys.MSG, Keys.ENCODING},
         Actions.JOIN: {Keys.ACTION, Keys.TIME, Keys.ROOM},
         Actions.LEAVE: {Keys.ACTION, Keys.TIME, Keys.ROOM},
+        Actions.CONTACTS: {Keys.ACTION, Keys.ACCOUNT_NAME, Keys.TIME},
+        Actions.ADD_CONTACT: {Keys.ACTION, Keys.ACCOUNT_NAME, Keys.CONTACT, Keys.TIME},
+        Actions.DEL_CONTACT: {Keys.ACTION, Keys.ACCOUNT_NAME, Keys.CONTACT, Keys.TIME},
     }
 
     usr_keys = {Actions.AUTH: {Keys.ACCOUNT_NAME, Keys.PASSWORD}, Actions.PRESENCE: {Keys.ACCOUNT_NAME, Keys.STATUS}}

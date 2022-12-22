@@ -45,8 +45,8 @@ def parse_args():
 
 if __name__ == "__main__":
     try:
-        username, *conn_params = parse_args()
-        with JIMClient(tuple(conn_params), username=username) as jim_client:
+        username, ip, port = parse_args()
+        with JIMClient(ip=ip, port=port, username=username) as jim_client:
             jim_client.run()
 
     except KeyboardInterrupt:

@@ -16,13 +16,13 @@ def launch_processes(clients_count: int = 1):
 
     tasks = []
     if platform.system().lower() == "windows":
-        tasks.append(subprocess.Popen("poetry run python server.py", creationflags=subprocess.CREATE_NEW_CONSOLE))
+        tasks.append(subprocess.Popen("poetry run python server.py", creationflags=subprocess.CREATE_NEW_CONSOLE))  # type: ignore
         print("Запущен сервер.")
         sleep(0.5)
         for num in range(1, clients_count + 1):
             user = f"user{num}"
             task = subprocess.Popen(
-                f"poetry run python client.py -u {user}", creationflags=subprocess.CREATE_NEW_CONSOLE
+                f"poetry run python client.py -u {user}", creationflags=subprocess.CREATE_NEW_CONSOLE  # type: ignore
             )
             tasks.append(task)
             print(f'Запущен клиент от имени "{user}".')

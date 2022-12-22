@@ -9,12 +9,13 @@ class CommonConf:
     EXIT_WORD = "quit"
     ROOT_DIR = pathlib.Path().resolve()
     LOGS_DIR = ROOT_DIR / "logs"
+    DATA_DIR = ROOT_DIR / "data"
 
 
 class ServerConf:
     DB_CONFIG = {
         "TEST_URL": "sqlite:///:memory:",
-        "URL": "sqlite:///data/jim_db.sqlite",
+        "URL": "sqlite:///data/jim_server_db.sqlite",
         "USER": "",
         "PSWD": "",
     }

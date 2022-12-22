@@ -11,11 +11,11 @@ class ServerStorage:
         self.session = Session()
         self.set_all_users_inactive()
 
-    def register_user(self, username, password=None, ip_address=None):
+    def register_user(self, username, status=None, password=None, ip_address=None):
         try:
             user = self.session.query(User).filter_by(username=username).one()
         except NoResultFound:
-            user = User(username=username, password=password)
+            user = User(username=username, password=password, status=status)
         if ip_address:
             user.history.append(History(ip_address=ip_address))
         self.session.add(user)
@@ -29,7 +29,11 @@ class ServerStorage:
 
     def get_active_users(self):
         query = self.session.query(User).filter_by(is_active=True).all()
-        yield from (entry.username for entry in query)
+        return [entry.username for entry in query]
+
+    def get_users_history(self):
+        query = self.session.query(History).all()
+        return [(entry.user.username, entry.ip_address, entry.login_timestamp) for entry in query]
 
     def set_all_users_inactive(self):
         for user in self.get_active_users():
@@ -45,12 +49,12 @@ class ServerStorage:
         self.session.add(contact_pair)
         self.session.commit()
 
-    def register_contacts(self, user_from, user_to):
+    def register_contacts(self, username, contact_name):
         with suppress(IntegrityError):
-            self.register_user(username=user_from)
-            self.register_user(username=user_to)
-        user_from_query = self.session.query(User).filter_by(username=user_from).one()
-        user_to_query = self.session.query(User).filter_by(username=user_to).one()
+            self.register_user(username=username)
+            self.register_user(username=contact_name)
+        user_from_query = self.session.query(User).filter_by(username=username).one()
+        user_to_query = self.session.query(User).filter_by(username=contact_name).one()
         user_from_query.contacts.append(user_to_query)
         self.session.add(user_from_query)
         self.session.commit()
@@ -65,7 +69,7 @@ class ServerStorage:
         else:
             for pair in contact_pairs:
                 try:
-                    messages = self.session.query(Message).filter_by(contact_id=pair.id, is_delivered=False)
+                    messages = self.session.query(Message).filter_by(contact_id=pair.id, is_delivered=False).all()
                     yield from ((entry.id, json.loads(entry.text)) for entry in messages)
                 except NoResultFound:
                     continue
@@ -73,3 +77,35 @@ class ServerStorage:
     def mark_msg_is_delivered(self, msg_id: int):
         self.session.query(Message).filter_by(id=msg_id).update({"is_delivered": True})
         self.session.commit()
+
+    def get_user_contacts(self, username: str):
+        try:
+            user = self.session.query(User).filter_by(username=username).one()
+            contacts = (
+                self.session.query(Contact)
+                .join(User)
+                .filter(Contact.user_id == user.id and Contact.is_active == True)
+                .all()
+            )
+        except NoResultFound:
+            return []
+        else:
+            return [contact.username for contact in contacts]
+
+    def delete_contact(self, username: str, contact_name: str):
+        try:
+            user = self.session.query(User).filter_by(username=username).one()
+            contact = self.session.query(User).filter_by(username=contact_name).one()
+            self.session.query(Contact).filter_by(user_id=user.id, contact_id=contact.id).update({"is_active": False})
+            self.session.commit()
+        except NoResultFound:
+            pass
+
+    def add_contact(self, username: str, contact_name: str):
+        try:
+            user = self.session.query(User).filter_by(username=username).one()
+            contact = self.session.query(User).filter_by(username=contact_name).one()
+            self.session.query(Contact).filter_by(user_id=user.id, contact_id=contact.id).update({"is_active": True})
+            self.session.commit()
+        except NoResultFound:
+            self.register_contacts(username=username, contact_name=contact_name)

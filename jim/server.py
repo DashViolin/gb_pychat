@@ -9,41 +9,23 @@ import config
 from logger.server_log_config import main_logger
 
 from .base import JIMBase
+from .descriptors import PortDescriptor
 from .errors import IncorrectDataRecivedError, NonDictInputError, ReqiuredFieldMissingError
 from .schema import Actions, Keys
 from .server_storage import ServerStorage
-
-
-class PortDescriptor:
-    def __init__(self, value: int = 7777):
-        self.__set_port(value)
-
-    def __set_port(self, value: int):
-        if not 1023 < value < 65536:
-            raise ValueError("Номер порта должен быть положительным числом в диапазоне [1024, 65535].")
-        self._value = value
-
-    def __get__(self, instance, instance_type):
-        return self._value
-
-    def __set__(self, instance, value):
-        self.__set_port(value)
-
-    def __delete__(self, instance):
-        raise AttributeError("Невозможно удалить атрибут.")
 
 
 class JIMServer(JIMBase, ContextDecorator):
     port = PortDescriptor()
 
     def __init__(self, ip: str, port: int) -> None:
+        super().__init__()
         self.ip = ip_address(ip)
         self.port = port
         self.sock = socket(AF_INET, SOCK_STREAM)
         self.connections = []
         self.active_clients = dict()
         self.storage = ServerStorage()
-        super().__init__()
 
     def __str__(self):
         return "JIM_server_object"
@@ -147,8 +129,9 @@ class JIMServer(JIMBase, ContextDecorator):
                         if username not in self.active_clients:
                             self.active_clients[username] = client_conn
                             passwd = msg[Keys.USER].get(Keys.PASSWORD)
+                            status = msg[Keys.USER].get(Keys.STATUS)
                             ip = client_conn.getpeername()[0]
-                            self.storage.register_user(username=username, password=passwd, ip_address=ip)
+                            self.storage.register_user(username=username, password=passwd, status=status, ip_address=ip)
                             self.storage.set_user_is_active(username=username)
                         else:
                             response_code = HTTPStatus.FORBIDDEN
@@ -158,6 +141,18 @@ class JIMServer(JIMBase, ContextDecorator):
                         username = msg[Keys.FROM]
                         target_user = msg[Keys.TO]
                         self.storage.store_msg(user_from=username, user_to=target_user, msg=msg)
+                    case Actions.CONTACTS:
+                        username = msg[Keys.ACCOUNT_NAME]
+                        contacts = self.storage.get_user_contacts(username=username)
+                        response_descr = contacts
+                    case Actions.ADD_CONTACT:
+                        username = msg[Keys.ACCOUNT_NAME]
+                        contact = msg[Keys.CONTACT]
+                        self.storage.add_contact(username=username, contact_name=contact)
+                    case Actions.DEL_CONTACT:
+                        username = msg[Keys.ACCOUNT_NAME]
+                        contact = msg[Keys.CONTACT]
+                        self.storage.delete_contact(username=username, contact_name=contact)
                     case Actions.QUIT:
                         disconnect_client = True
                     case Actions.JOIN | Actions.LEAVE:
@@ -201,7 +196,7 @@ class JIMServer(JIMBase, ContextDecorator):
         msg = {Keys.ACTION: Actions.PROBE}
         return msg
 
-    def _make_response_msg(self, code: HTTPStatus, description: str = ""):
+    def _make_response_msg(self, code: HTTPStatus, description: str | list = ""):
         description = description or code.phrase
         msg = {
             Keys.RESPONSE: code.value,

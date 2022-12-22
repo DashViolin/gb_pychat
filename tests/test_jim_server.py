@@ -91,7 +91,7 @@ class TestJIMBase(BaseServerTestCase):
 
     def test_from_timestamp(self):
         iso_time_orig = "1970-01-01T03:00:00"
-        iso_time = self.server._from_timestamp(0)
+        iso_time = self.server._from_timestamp_to_iso(0)
         self.assertEqual(iso_time, iso_time_orig)
 
     def test_dump_load_msg(self):
