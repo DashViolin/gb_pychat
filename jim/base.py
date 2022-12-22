@@ -39,8 +39,15 @@ class JIMBase(metaclass=JIMMeta):
         except KeyError:
             raise IncorrectDataRecivedError()
 
-    def _from_timestamp(self, timestamp: float | int) -> str:
+    def _from_timestamp_to_iso(self, timestamp: float | int) -> str:
         return datetime.fromtimestamp(timestamp).isoformat()
+
+    def _from_iso_to_datetime(self, iso_timestamp: str) -> datetime:
+        return datetime.fromisoformat(iso_timestamp)
+
+    def _update_timestamp(self, msg: dict):
+        timestamp = {Keys.TIME: datetime.now().isoformat()}
+        msg.update(timestamp)
 
     def _dump_msg(self, msg: dict) -> bytes:
         timestamp = {Keys.TIME: datetime.now().timestamp()}
@@ -51,7 +58,7 @@ class JIMBase(metaclass=JIMMeta):
         try:
             msg: dict = json.loads(data.decode(self.encoding))
             timestamp = msg.get(Keys.TIME, 0)
-            msg.update({Keys.TIME: self._from_timestamp(timestamp)})
+            msg.update({Keys.TIME: self._from_timestamp_to_iso(timestamp)})
             return msg
         except JSONDecodeError:
             raise IncorrectDataRecivedError()

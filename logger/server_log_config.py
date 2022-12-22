@@ -14,12 +14,12 @@ file_handler = TimedRotatingFileHandler(
     interval=1,
     backupCount=7,
 )
-file_handler.setLevel(logging.WARNING)
+file_handler.setLevel(logging.DEBUG)
 file_handler.setFormatter(main_formatter)
 main_logger.addHandler(file_handler)
 
 console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.INFO)
+console_handler.setLevel(logging.DEBUG)
 console_handler.setFormatter(main_formatter)
 main_logger.addHandler(console_handler)
 

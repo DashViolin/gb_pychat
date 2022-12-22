@@ -16,7 +16,7 @@
             "name": "Server",
             "type": "python",
             "request": "launch",
-            "program": "./server.py",
+            "program": "./server.pyw",
             "console": "integratedTerminal",
             "justMyCode": true
         },

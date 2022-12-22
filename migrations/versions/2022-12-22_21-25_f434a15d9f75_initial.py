@@ -1,15 +1,15 @@
 """initial
 
-Revision ID: 1905bb5628b3
+Revision ID: f434a15d9f75
 Revises: 
-Create Date: 2022-12-12 03:27:38.645905
+Create Date: 2022-12-22 21:25:03.080376
 
 """
 import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = "1905bb5628b3"
+revision = "f434a15d9f75"
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -22,6 +22,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("username", sa.String(), nullable=True),
         sa.Column("password", sa.String(), nullable=True),
+        sa.Column("status", sa.Text(), nullable=True),
         sa.Column("is_active", sa.Boolean(), nullable=True),
         sa.PrimaryKeyConstraint("id"),
     )
@@ -32,11 +33,13 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("user_id", sa.Integer(), nullable=True),
         sa.Column("contact_id", sa.Integer(), nullable=True),
+        sa.Column("is_active", sa.Boolean(), nullable=True),
         sa.ForeignKeyConstraint(["contact_id"], ["user.id"], onupdate="CASCADE", ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["user_id"], ["user.id"], onupdate="CASCADE", ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("user_id", "contact_id"),
     )
+    op.create_index(op.f("ix_contact_is_active"), "contact", ["is_active"], unique=False)
     op.create_table(
         "history",
         sa.Column("id", sa.Integer(), nullable=False),
@@ -65,6 +68,7 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_message_is_delivered"), table_name="message")
     op.drop_table("message")
     op.drop_table("history")
+    op.drop_index(op.f("ix_contact_is_active"), table_name="contact")
     op.drop_table("contact")
     op.drop_index(op.f("ix_user_username"), table_name="user")
     op.drop_index(op.f("ix_user_is_active"), table_name="user")

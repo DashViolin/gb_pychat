@@ -1,5 +1,5 @@
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, create_engine
-from sqlalchemy.orm import declarative_base, relationship, sessionmaker
+from sqlalchemy.orm import backref, declarative_base, relationship, sessionmaker
 from sqlalchemy.sql import func
 
 from config import ServerConf
@@ -16,10 +16,14 @@ class Contact(Base):
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("user.id", onupdate="CASCADE", ondelete="CASCADE"), nullable=True)
     contact_id = Column(Integer, ForeignKey("user.id", onupdate="CASCADE", ondelete="CASCADE"), nullable=True)
+    is_active = Column(Boolean, default=True, index=True)
 
     __table_args__ = (UniqueConstraint(user_id, contact_id),)
 
     messages = relationship("Message", backref="contact")
+
+    user = relationship("User", backref=backref("user", uselist=False), foreign_keys=[user_id])
+    contact = relationship("User", backref=backref("contact", uselist=False), foreign_keys=[contact_id])
 
 
 class Message(Base):
@@ -38,6 +42,7 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     username = Column(String, index=True, unique=True)
     password = Column(String)
+    status = Column(Text)
     is_active = Column(Boolean, default=False, index=True)
     contacts = relationship(
         "User",
@@ -61,28 +66,3 @@ Session = sessionmaker(bind=engine)
 
 if __name__ == "__main__":
     Base.metadata.create_all(engine)
-
-
-# class EntityAssociation(Base):
-#     __tablename__ = 'entity_association'
-
-#     entity_parent_id = Column(Integer, ForeignKey('entity.id'), primary_key=True)
-#     entity_child_id = Column(Integer, ForeignKey('entity.id'), primary_key=True)
-
-# class Entity(Base):
-#     __tablename__ = 'entity'
-
-#     id = Column(Integer, primary_key=True)
-#     name = Column(String)
-
-#     entity_childs = relationship('Entity',
-#                                  secondary='entity_association',
-#                                  primaryjoin=id==EntityAssociation.entity_parent_id,
-#                                  secondaryjoin=id==EntityAssociation.entity_child_id,
-#                                  backref='childs')
-
-#     entity_parents = relationship('Entity',
-#                                   secondary='entity_association',
-#                                   primaryjoin=id==EntityAssociation.entity_child_id,
-#                                   secondaryjoin=id==EntityAssociation.entity_parent_id,
-#                                   backref='parents')

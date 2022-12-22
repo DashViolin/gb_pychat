@@ -1,5 +1,3 @@
-import os
-import pathlib
 from collections import defaultdict
 from copy import deepcopy
 from http import HTTPStatus
@@ -21,7 +19,6 @@ class BaseServerTestCase(TestCase):
             return client
 
         self.mock_time = {Keys.TIME: 0}
-        self.msg_queue_dump_file = pathlib.Path().resolve() / "tmp_dump_file.json"
         ip, port = "127.0.0.1", 7777
         self.server = JIMServer(ip, port)
         self.server.close()
@@ -29,6 +26,8 @@ class BaseServerTestCase(TestCase):
         self.server.sock.listen.return_value = None
         self.server.sock.bind.return_value = None
         self.server.sock.accept.return_value = (mock.Mock(), ("192.168.1.1", 33333))
+        self.server.storage = mock.Mock()
+        self.server.storage.change_user_status.return_value = None
         self.server._listen()
 
         self.mock_presense = {Keys.ACTION: Actions.PRESENCE, Keys.USER: {Keys.ACCOUNT_NAME: "user", Keys.STATUS: ""}}
@@ -57,8 +56,6 @@ class BaseServerTestCase(TestCase):
         return super().setUp()
 
     def tearDown(self) -> None:
-        if self.msg_queue_dump_file.exists():
-            os.remove(self.msg_queue_dump_file)
         return super().tearDown()
 
 
@@ -91,7 +88,7 @@ class TestJIMBase(BaseServerTestCase):
 
     def test_from_timestamp(self):
         iso_time_orig = "1970-01-01T03:00:00"
-        iso_time = self.server._from_timestamp(0)
+        iso_time = self.server._from_timestamp_to_iso(0)
         self.assertEqual(iso_time, iso_time_orig)
 
     def test_dump_load_msg(self):
@@ -154,6 +151,8 @@ class TestJIMServer(BaseServerTestCase):
     def test_make_probe_msg(self):
         probe_msg_orig = {Keys.ACTION: Actions.PROBE}
         probe_msg = self.server._make_probe_msg()
+        probe_msg_orig.update(self.mock_time)  # type: ignore
+        probe_msg.update(self.mock_time)  # type: ignore
         self.assertEqual(probe_msg, probe_msg_orig)
 
     def test_make_response_msg_ok(self):
@@ -162,6 +161,8 @@ class TestJIMServer(BaseServerTestCase):
             Keys.ALERT: HTTPStatus.OK.phrase,
         }
         response_msg = self.server._make_response_msg(code=HTTPStatus.OK)
+        response_orig.update(self.mock_time)  # type: ignore
+        response_msg.update(self.mock_time)  # type: ignore
         self.assertEqual(response_msg, response_orig)
 
     def test_make_response_msg_403(self):
@@ -170,6 +171,8 @@ class TestJIMServer(BaseServerTestCase):
             Keys.ERROR: HTTPStatus.FORBIDDEN.phrase,
         }
         response_msg = self.server._make_response_msg(code=HTTPStatus.FORBIDDEN)
+        response_orig.update(self.mock_time)  # type: ignore
+        response_msg.update(self.mock_time)  # type: ignore
         self.assertEqual(response_msg, response_orig)
 
     def test_make_response_msg_error_with_descr(self):
@@ -179,4 +182,6 @@ class TestJIMServer(BaseServerTestCase):
             Keys.ERROR: descr,
         }
         response_msg = self.server._make_response_msg(code=HTTPStatus.INTERNAL_SERVER_ERROR, description=descr)
+        response_orig.update(self.mock_time)  # type: ignore
+        response_msg.update(self.mock_time)  # type: ignore
         self.assertEqual(response_msg, response_orig)
