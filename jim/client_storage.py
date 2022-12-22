@@ -7,7 +7,9 @@ from .client_model import Message, User, init_db
 
 class ClientStorage:
     def __init__(self, username) -> None:
-        self.session = init_db(username)
+        session, db_path = init_db(username)
+        self.session = session
+        self.db_path = db_path
 
     def store_and_get_user(self, username: str, is_contact: bool):
         user = None

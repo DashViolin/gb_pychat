@@ -1,3 +1,4 @@
+import os
 from copy import deepcopy
 from http import HTTPStatus
 from unittest import TestCase, mock
@@ -10,12 +11,13 @@ from jim.schema import Actions, Keys
 class TestJIMClient(TestCase):
     def setUp(self):
         self.encoding = config.CommonConf.ENCODING
-        self.username = "user"
+        self.username = "some_testing_username"
         self.mock_time = {Keys.TIME: 0}
         self.mock_resp = {Keys.RESPONSE: HTTPStatus.OK.value, Keys.ALERT: HTTPStatus.OK.phrase}
         self.mock_resp.update(self.mock_time)
-        conn_params = ("127.0.0.1", 7777)
-        self.client = JIMClient(conn_params=conn_params, username=self.username)
+        self.ip = "127.0.0.1"
+        self.port = 7777
+        self.client = JIMClient(ip=self.ip, port=self.port, username=self.username)
         self.client.close()
         self.client.sock = mock.Mock()
         self.client.sock.connect.return_value = None
@@ -23,10 +25,10 @@ class TestJIMClient(TestCase):
         self.client.sock.recv.return_value = self.client._dump_msg(self.mock_resp.copy())
         return super().setUp()
 
-    def test_connect(self):
-        response = self.client._connect()
-        response.update(self.mock_time)
-        self.assertEqual(response, self.mock_resp)
+    def tearDown(self) -> None:
+        if self.client.storage.db_path.exists():
+            os.remove(self.client.storage.db_path)
+        return super().tearDown()
 
     def test_recv(self):
         resp_orig = deepcopy(self.mock_resp)
@@ -38,7 +40,7 @@ class TestJIMClient(TestCase):
     def test_make_presence_msg(self):
         status = "some_status"
         msg_orig = {Keys.ACTION: Actions.PRESENCE, Keys.USER: {Keys.ACCOUNT_NAME: self.username, Keys.STATUS: status}}
-        msg = self.client._make_presence_msg(status=status)
+        msg = self.client.msg_factory.make_presence_msg(status=status)
         self.assertEqual(msg, msg_orig)
 
     def test_make_authenticate_msg(self):
@@ -47,14 +49,14 @@ class TestJIMClient(TestCase):
             Keys.ACTION: Actions.AUTH,
             Keys.USER: {Keys.ACCOUNT_NAME: self.username, Keys.PASSWORD: passwd},
         }
-        msg = self.client._make_authenticate_msg(password=passwd)
+        msg = self.client.msg_factory.make_authenticate_msg(password=passwd)
         self.assertEqual(msg, msg_orig)
 
     def test_make_quit_msg(self):
         msg_orig = {
             Keys.ACTION: Actions.QUIT,
         }
-        msg = self.client._make_quit_msg()
+        msg = self.client.msg_factory.make_quit_msg()
         self.assertEqual(msg, msg_orig)
 
     def test_make_msg(self):
@@ -67,31 +69,31 @@ class TestJIMClient(TestCase):
             Keys.MSG: msg_text,
             Keys.ENCODING: self.encoding,
         }
-        msg = self.client._make_msg(user_or_room=target, message=msg_text)
+        msg = self.client.msg_factory.make_msg(user_or_room=target, message=msg_text)
         self.assertEqual(msg, msg_orig)
 
     def test_make_join_room_msg(self):
         room_name_right = "#room"
         msg_orig_right_room = {Keys.ACTION: Actions.JOIN, Keys.ROOM: room_name_right}
-        msg_right_room = self.client._make_join_room_msg(room_name_right)
+        msg_right_room = self.client.msg_factory.make_join_room_msg(room_name_right)
         self.assertEqual(msg_right_room, msg_orig_right_room)
 
     def test_make_join_room_msg_with_wrong_room_name(self):
         room_name_right = "#room"
         room_name_wrong = "room"
         msg_orig = {Keys.ACTION: Actions.JOIN, Keys.ROOM: room_name_right}
-        msg = self.client._make_join_room_msg(room_name_wrong)
+        msg = self.client.msg_factory.make_join_room_msg(room_name_wrong)
         self.assertEqual(msg, msg_orig)
 
     def test_make_leave_room_msg(self):
         room_name_right = "#room"
         msg_orig_right_room = {Keys.ACTION: Actions.LEAVE, Keys.ROOM: room_name_right}
-        msg_right_room = self.client._make_leave_room_msg(room_name_right)
+        msg_right_room = self.client.msg_factory.make_leave_room_msg(room_name_right)
         self.assertEqual(msg_right_room, msg_orig_right_room)
 
     def test_make_leave_room_msg_with_wrong_room_name(self):
         room_name_right = "#room"
         room_name_wrong = "room"
         msg_orig = {Keys.ACTION: Actions.LEAVE, Keys.ROOM: room_name_right}
-        msg = self.client._make_leave_room_msg(room_name_wrong)
+        msg = self.client.msg_factory.make_leave_room_msg(room_name_wrong)
         self.assertEqual(msg, msg_orig)

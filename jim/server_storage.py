@@ -21,7 +21,7 @@ class ServerStorage:
         self.session.add(user)
         self.session.commit()
 
-    def set_user_is_active(self, username: str, is_active=True):
+    def change_user_status(self, username: str, is_active: bool):
         user = self.session.query(User).filter_by(username=username).one()
         user.is_active = is_active
         self.session.add(user)
@@ -37,7 +37,7 @@ class ServerStorage:
 
     def set_all_users_inactive(self):
         for user in self.get_active_users():
-            self.set_user_is_active(user, is_active=False)
+            self.change_user_status(user, is_active=False)
 
     def store_msg(self, user_from, user_to, msg: dict):
         user_from_query, user_to_query = self.register_contacts(user_from, user_to)

@@ -100,7 +100,7 @@ class JIMServer(JIMBase, ContextDecorator):
 
     def _disconnect_client(self, conn: socket, user: str | None = None):
         if user:
-            self.storage.set_user_is_active(username=user, is_active=False)
+            self.storage.change_user_status(username=user, is_active=False)
             try:
                 self.active_clients.pop(user)
             except KeyError:
@@ -132,7 +132,7 @@ class JIMServer(JIMBase, ContextDecorator):
                             status = msg[Keys.USER].get(Keys.STATUS)
                             ip = client_conn.getpeername()[0]
                             self.storage.register_user(username=username, password=passwd, status=status, ip_address=ip)
-                            self.storage.set_user_is_active(username=username)
+                            self.storage.change_user_status(username=username, is_active=True)
                         else:
                             response_code = HTTPStatus.FORBIDDEN
                             response_descr = "Клиент с таким именем уже зарегистрирован на сервере"

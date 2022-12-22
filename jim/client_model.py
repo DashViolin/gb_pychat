@@ -38,4 +38,4 @@ def init_db(username: str):
 
     Session = sessionmaker(bind=engine)
     session = Session()
-    return session
+    return session, db_path

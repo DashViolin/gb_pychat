@@ -1,5 +1,3 @@
-import os
-import pathlib
 from collections import defaultdict
 from copy import deepcopy
 from http import HTTPStatus
@@ -21,7 +19,6 @@ class BaseServerTestCase(TestCase):
             return client
 
         self.mock_time = {Keys.TIME: 0}
-        self.msg_queue_dump_file = pathlib.Path().resolve() / "tmp_dump_file.json"
         ip, port = "127.0.0.1", 7777
         self.server = JIMServer(ip, port)
         self.server.close()
@@ -29,6 +26,8 @@ class BaseServerTestCase(TestCase):
         self.server.sock.listen.return_value = None
         self.server.sock.bind.return_value = None
         self.server.sock.accept.return_value = (mock.Mock(), ("192.168.1.1", 33333))
+        self.server.storage = mock.Mock()
+        self.server.storage.change_user_status.return_value = None
         self.server._listen()
 
         self.mock_presense = {Keys.ACTION: Actions.PRESENCE, Keys.USER: {Keys.ACCOUNT_NAME: "user", Keys.STATUS: ""}}
@@ -57,8 +56,6 @@ class BaseServerTestCase(TestCase):
         return super().setUp()
 
     def tearDown(self) -> None:
-        if self.msg_queue_dump_file.exists():
-            os.remove(self.msg_queue_dump_file)
         return super().tearDown()
 
 
