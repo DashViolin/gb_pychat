@@ -4,7 +4,7 @@ import sys
 
 from PyQt6 import QtWidgets
 
-from config import CommonConf, ServerConf
+from config import ServerConf
 from gui_server.clients_window import Ui_ClientsWindow
 from gui_server.history_window import Ui_HistoryWindow
 from gui_server.main_window import Ui_MainWindow
@@ -18,7 +18,7 @@ class Application:
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self.main_window)
         self.ui.lineEditIP.setText(ServerConf.DEFAULT_LISTENER_ADDRESS)
-        self.ui.lineEditPort.setText(str(CommonConf.DEFAULT_PORT))
+        self.ui.lineEditPort.setText(str(ServerConf.DEFAULT_PORT))
         self.clients_window = ClientsWindow()
         self.history_window = HistoryWindow()
         self._create_bindings()

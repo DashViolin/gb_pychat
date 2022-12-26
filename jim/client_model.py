@@ -1,7 +1,7 @@
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text, create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.orm import backref, declarative_base, relationship, sessionmaker
 
-from config import CommonConf
+from config import ClientConf
 
 Base = declarative_base()
 
@@ -27,9 +27,12 @@ class Message(Base):
     text = Column(Text)
     timestamp = Column(DateTime)
 
+    user = relationship("User", backref=backref("user", uselist=False), foreign_keys=[sender_id])
+    contact = relationship("User", backref=backref("contact", uselist=False), foreign_keys=[reciever_id])
+
 
 def init_db(username: str):
-    db_path = CommonConf.DATA_DIR / f"jim_client_db_{username}.sqlite"
+    db_path = ClientConf.DATA_DIR / f"jim_client_db_{username}.sqlite"
     conn_string = f"sqlite:///{db_path}?check_same_thread=false&uri=true"
 
     engine = create_engine(conn_string, future=True, echo=False, pool_recycle=7200)

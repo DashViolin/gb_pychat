@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from sqlalchemy import and_, or_
 from sqlalchemy.exc import NoResultFound
 
 from .client_model import Message, User, init_db
@@ -44,7 +45,7 @@ class ClientStorage:
         self.session.commit()
 
     def get_contact_list(self):
-        query = self.session.query(User).filter_by(is_contact=True).all()
+        query = self.session.query(User).all()
         users = [(entry.username, entry.is_active) for entry in query]
         return list(sorted(sorted(users, key=lambda x: x[0]), key=lambda x: x[1], reverse=True))
 
@@ -61,16 +62,35 @@ class ClientStorage:
         self.session.add(message)
         self.session.commit()
 
-    def get_user_messages(self, user_from, user_to):
-        sender, reciever = self.get_contact_pair(user_from=user_from, user_to=user_to)
+    def get_chat_messages(self, user, contact):
+        sender, reciever = self.get_contact_pair(user_from=user, user_to=contact)
         try:
             messages = (
                 self.session.query(Message)
-                .filter_by(sender_id=sender.id, reciever_id=reciever.id)
-                .order_by(Message.timestamp.desc())
+                .filter(
+                    or_(
+                        and_(
+                            (Message.sender_id == sender.id),
+                            (Message.reciever_id == reciever.id),
+                        ),
+                        and_(
+                            (Message.sender_id == reciever.id),
+                            (Message.reciever_id == sender.id),
+                        ),
+                    )
+                )
+                .order_by(Message.timestamp)
                 .all()
             )
         except NoResultFound:
             return []
         else:
-            yield from ((entry.text, entry.timestamp) for entry in messages)
+            return [(entry.text, entry.user.username, entry.timestamp) for entry in messages]
+
+    def add_contact(self, contact: str):
+        self.store_and_get_user(username=contact, is_contact=True)
+        self.set_contact_activity(username=contact, is_active=True)
+
+    def del_contact(self, contact: str):
+        self.store_and_get_user(username=contact, is_contact=True)
+        self.set_contact_activity(username=contact, is_active=False)

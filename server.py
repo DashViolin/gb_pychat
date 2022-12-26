@@ -1,7 +1,7 @@
 import argparse
 import sys
 
-from config import CommonConf, ServerConf
+from config import ServerConf
 from jim.server import JIMServer
 from logger.decorator import log
 from logger.server_log_config import call_logger, main_logger
@@ -24,8 +24,8 @@ def parse_args():
         "-p",
         "--port",
         help="Port for server listener",
-        type=type(CommonConf.DEFAULT_PORT),
-        default=CommonConf.DEFAULT_PORT,
+        type=type(ServerConf.DEFAULT_PORT),
+        default=ServerConf.DEFAULT_PORT,
     )
     args = parser.parse_args()
     if not 1023 < args.port < 65536:

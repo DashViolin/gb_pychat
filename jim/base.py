@@ -3,7 +3,7 @@ from abc import abstractmethod
 from datetime import datetime
 from json import JSONDecodeError
 
-import config
+from config import CommonConf
 
 from .errors import IncorrectDataRecivedError, NonDictInputError, ReqiuredFieldMissingError
 from .meta import JIMMeta
@@ -12,8 +12,8 @@ from .schema import JIMValidationSchema, Keys
 
 class JIMBase(metaclass=JIMMeta):
     def __init__(self) -> None:
-        self.encoding = config.CommonConf.ENCODING
-        self.package_length = config.CommonConf.MAX_PACKAGE_LENGTH
+        self.encoding = CommonConf.ENCODING
+        self.package_length = CommonConf.MAX_PACKAGE_LENGTH
         self.schema = JIMValidationSchema()
 
     @abstractmethod
