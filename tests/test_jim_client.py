@@ -3,14 +3,14 @@ from copy import deepcopy
 from http import HTTPStatus
 from unittest import TestCase, mock
 
-import config
+from config import ClientConf
 from jim.client import JIMClient
 from jim.schema import Actions, Keys
 
 
 class TestJIMClient(TestCase):
     def setUp(self):
-        self.encoding = config.CommonConf.ENCODING
+        self.encoding = ClientConf.ENCODING
         self.username = "some_testing_username"
         self.mock_time = {Keys.TIME: 0}
         self.mock_resp = {Keys.RESPONSE: HTTPStatus.OK.value, Keys.ALERT: HTTPStatus.OK.phrase}

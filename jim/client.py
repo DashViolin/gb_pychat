@@ -6,7 +6,8 @@ from socket import AF_INET, SOCK_STREAM, socket
 from threading import Thread
 from time import sleep
 
-import config
+from PyQt6 import QtCore
+
 from logger.client_log_config import main_logger
 
 from .base import JIMBase
@@ -28,6 +29,7 @@ class JIMClient(JIMBase, ContextDecorator):
         self.username = username
         self.msg_factory = ClientMessages(self.username, self.encoding)
         self.storage = ClientStorage(self.username)
+        self.notifier = SignalNotifier()
         self.status = self.storage.get_user_status(self.username)
         self.msg_queue = []
 
@@ -92,27 +94,47 @@ class JIMClient(JIMBase, ContextDecorator):
                     continue
                 break
 
-    def _get_new_message(self):
-        try:
-            username = str(input("Введите имя адресата: "))
-            if username.strip():
-                msg_text = str(input(f"Введите текст (или '{config.CommonConf.EXIT_WORD}' для выхода): "))
-                if msg_text.strip() == config.CommonConf.EXIT_WORD:
-                    quit = self.msg_factory.make_quit_msg()
-                    self._send(quit)
-                    self.close()
-                    raise KeyboardInterrupt
-                msg = self.msg_factory.make_msg(username, msg_text)
-                self.msg_queue.append(msg)
-                timestamp = self._from_iso_to_datetime(msg[Keys.TIME])
-                self.storage.store_msg(
-                    user_from=self.username, user_to=username, msg_text=msg_text, timestamp=timestamp
-                )
-        except (NonDictInputError, IncorrectDataRecivedError, ReqiuredFieldMissingError) as ex:
-            main_logger.error(ex)
+    def send_msg(self, contact: str, msg_text: str):
+        msg = self.msg_factory.make_msg(user_or_room=contact, message=msg_text)
+        timestamp = self._from_iso_to_datetime(msg[Keys.TIME])
+        self.msg_queue.append(msg)
+        self.storage.store_msg(user_from=self.username, user_to=contact, msg_text=msg_text, timestamp=timestamp)
 
-    def _show_message(self, sender: str, text: str):
-        print(f"\nПолучено сообщение от пользователя [{sender}]:\n{text}\n")
+    def add_contact(self, contact_name):
+        msg = self.msg_factory.make_add_contact_msg(contact=contact_name)
+        self.msg_queue.append(msg)
+        self.storage.add_contact(contact=contact_name)
+
+    def delete_contact(self, contact_name):
+        msg = self.msg_factory.make_del_contact_msg(contact=contact_name)
+        self.msg_queue.append(msg)
+        self.storage.del_contact(contact=contact_name)
+
+    # def _get_new_message(self):
+    #     """
+    #     For console mode
+    #     """
+    #     try:
+    #         username = str(input("Введите имя адресата: "))
+    #         if username.strip():
+    #             msg_text = str(input(f"Введите текст (или '{ClientConf.EXIT_WORD}' для выхода): "))
+    #             if msg_text.lower().strip() == 'quit':
+    #                 quit = self.msg_factory.make_quit_msg()
+    #                 self._send(quit)
+    #                 self.close()
+    #                 raise KeyboardInterrupt
+    #             msg = self.msg_factory.make_msg(username, msg_text)
+    #             self.msg_queue.append(msg)
+    #             timestamp = self._from_iso_to_datetime(msg[Keys.TIME])
+    #             self.storage.store_msg(
+    #                 user_from=self.username, user_to=username, msg_text=msg_text, timestamp=timestamp
+    #             )
+    #     except (NonDictInputError, IncorrectDataRecivedError, ReqiuredFieldMissingError) as ex:
+    #         main_logger.error(ex)
+
+    def _notify_new_message(self, sender: str, text: str):
+        # print(f"\nПолучено сообщение от пользователя [{sender}]:\n{text}\n")  # for console mode
+        self.notifier.new_message.emit(sender)
 
     def _start_sender_loop(self):
         while True:
@@ -124,7 +146,8 @@ class JIMClient(JIMBase, ContextDecorator):
                         main_logger.debug(f"Отправлено сообщение: {msg}")
                 except Exception as ex:
                     main_logger.error(ex)
-            self._get_new_message()
+            # For consloe mode:
+            # self._get_new_message()
 
     def _start_reciever_loop(self):
         while True:
@@ -139,6 +162,7 @@ class JIMClient(JIMBase, ContextDecorator):
                     self._process_incoming_msg(msg)
             except (OSError, ServerDisconnectError):
                 main_logger.info("Соединение разорвано.")
+                self.notifier.connection_lost.emit()
                 break
 
     def _process_incoming_msg(self, msg):
@@ -148,7 +172,7 @@ class JIMClient(JIMBase, ContextDecorator):
             text = msg[Keys.MSG]
             timestamp = self._from_iso_to_datetime(msg[Keys.TIME])
             self.storage.store_msg(user_from=user_from, user_to=user_to, msg_text=text, timestamp=timestamp)
-            self._show_message(sender=user_from, text=text)
+            self._notify_new_message(sender=user_from, text=text)
             main_logger.debug(f"Получено сообщение: {msg}")
         elif msg.get(Keys.ACTION) == Actions.PROBE:
             response = self.msg_factory.make_presence_msg(status=self.status)
@@ -246,3 +270,11 @@ class ClientMessages:
         msg = {Keys.ACTION: Actions.DEL_CONTACT, Keys.ACCOUNT_NAME: self.username, Keys.CONTACT: contact}
         self._update_timestamp(msg=msg)
         return msg
+
+
+class SignalNotifier(QtCore.QObject):
+    new_message = QtCore.pyqtSignal(str)
+    connection_lost = QtCore.pyqtSignal()
+
+    def __init__(self) -> None:
+        super().__init__()

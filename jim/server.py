@@ -82,6 +82,7 @@ class JIMServer(JIMBase, ContextDecorator):
             for msg_id, msg in self.storage.get_user_messages(user_to=user):
                 try:
                     self._send(msg=msg, client=client_conn)
+                    sleep(0.1)
                 except (OSError, ConnectionRefusedError, ConnectionResetError, BrokenPipeError):
                     self._disconnect_client(conn=client_conn, user=user)
                     break

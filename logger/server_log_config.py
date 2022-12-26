@@ -1,7 +1,7 @@
 import logging
 from logging.handlers import RotatingFileHandler, TimedRotatingFileHandler
 
-from config import CommonConf, ServerConf
+from config import ServerConf
 
 main_logger = logging.getLogger("server.main")
 main_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(module)s - %(message)s")
@@ -9,7 +9,7 @@ main_logger.setLevel(logging.DEBUG)
 
 file_handler = TimedRotatingFileHandler(
     filename=ServerConf.MAIN_LOG_FILE_PATH,
-    encoding=CommonConf.ENCODING,
+    encoding=ServerConf.ENCODING,
     when="D",
     interval=1,
     backupCount=7,
@@ -30,7 +30,7 @@ call_handler = RotatingFileHandler(
     filename=ServerConf.CALL_LOG_FILE_PATH,
     maxBytes=1024 * 100000,  # 100000 KiB
     backupCount=7,
-    encoding=CommonConf.ENCODING,
+    encoding=ServerConf.ENCODING,
 )
 call_formatter = logging.Formatter("%(asctime)s - %(message)s")
 call_handler.setFormatter(call_formatter)

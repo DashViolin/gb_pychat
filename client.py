@@ -1,7 +1,7 @@
 import argparse
 import sys
 
-from config import ClientConf, CommonConf
+from config import ClientConf
 from jim.client import JIMClient
 from logger.client_log_config import call_logger, main_logger
 from logger.decorator import log
@@ -24,8 +24,8 @@ def parse_args():
         "-p",
         "--port",
         help="Port for server listener",
-        type=type(CommonConf.DEFAULT_PORT),
-        default=CommonConf.DEFAULT_PORT,
+        type=type(ClientConf.DEFAULT_PORT),
+        default=ClientConf.DEFAULT_PORT,
     )
     parser.add_argument(
         "-u",

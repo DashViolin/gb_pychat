@@ -29,11 +29,10 @@
             "justMyCode": true
         },
         {
-            "name": "Client u1",
+            "name": "Client",
             "type": "python",
             "request": "launch",
-            "program": "./client.py",
-            "args": ["-u", "u1"],
+            "program": "./client.pyw",
             "console": "integratedTerminal",
             "justMyCode": true
         }
