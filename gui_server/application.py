@@ -2,7 +2,7 @@ import platform
 import subprocess
 import sys
 
-from PyQt6 import QtWidgets
+from PyQt6 import QtCore, QtWidgets
 
 from config import ServerConf
 from gui_server.clients_window import Ui_ClientsWindow
@@ -21,15 +21,17 @@ class Application:
         self.ui.lineEditPort.setText(str(ServerConf.DEFAULT_PORT))
         self.clients_window = ClientsWindow()
         self.history_window = HistoryWindow()
+        self.server_storage = ServerStorage()
+        self.add_user_dialog = AddUserDialog()
         self._create_bindings()
         self.server_task = None
-        self.server_storage = ServerStorage()
 
     def run(self):
         self.main_window.show()
         sys.exit(self.app.exec())
 
     def _create_bindings(self):
+        self.add_user_dialog.accept_creds.connect(self.accept_cerds)
         self.ui.pushButtonAddContact.clicked.connect(self._on_click_add_user)
         self.ui.pushButtonDeleteContact.clicked.connect(self._on_click_del_user)
         self.ui.pushButtonClients.clicked.connect(self._on_click_show_clients)
@@ -65,30 +67,37 @@ class Application:
         self.clients_window.show()
 
     def _on_click_add_user(self):
-        user_add_from = AddUserDialog()
-        user_add_from.show()
-        username, password = user_add_from.get_credentials()
+        self.add_user_dialog.show()
+
+    def accept_cerds(self, username: str, password: str):
         if username and password:
             if not self.server_storage.check_user_exists(username=username):
                 self.server_storage.register_user(username=username, password=password)
             else:
-                self.show_standard_warning(info="Пользовтель с таким именем уже существует")
+                self.show_standard_notification(info="Пользовтель с таким именем уже существует")
         else:
-            self.show_standard_warning(info='Поля "имя пользователя" и "пароль" не должны быть пустыми')
+            self.show_standard_notification(info='Поля "имя пользователя" и "пароль" не должны быть пустыми')
 
     def _on_click_del_user(self):
         username, ok = QtWidgets.QInputDialog.getText(self.main_window, "Удаление пользователя", "Введите имя:")
         if ok:
             if self.server_storage.check_user_exists(username=username):
                 res = self.server_storage.remove_user(username=username)
-                if not res:
-                    self.show_standard_warning(info="Ошибка удаления пользователя")
+                if res:
+                    self.show_standard_notification(
+                        title="Успешно", info=f'Пользователь "{username}" удален', is_warning=False
+                    )
+                else:
+                    self.show_standard_notification(info="Ошибка удаления пользователя")
             else:
-                self.show_standard_warning(info="Пользователь с таким именем отсутсвует")
+                self.show_standard_notification(info="Пользователь с таким именем отсутсвует")
 
-    def show_standard_warning(self, info: str, title: str = "Ошибка"):
+    def show_standard_notification(self, info: str, title: str = "Ошибка", is_warning: bool = True):
         msg = QtWidgets.QMessageBox()
-        msg.setWindowIcon(self.app.style().standardIcon(QtWidgets.QStyle.StandardPixmap.SP_MessageBoxWarning))
+        if is_warning:
+            msg.setWindowIcon(self.app.style().standardIcon(QtWidgets.QStyle.StandardPixmap.SP_MessageBoxWarning))
+        else:
+            msg.setWindowIcon(self.app.style().standardIcon(QtWidgets.QStyle.StandardPixmap.SP_MessageBoxInformation))
         msg.setWindowTitle(title)
         msg.setInformativeText(info)
         msg.setStandardButtons(QtWidgets.QMessageBox.StandardButton.Ok)
@@ -153,29 +162,39 @@ class ClientsWindow:
 
 
 class AddUserDialog(QtWidgets.QDialog):
+    accept_creds = QtCore.pyqtSignal(str, str)
+
     def __init__(self, parent=None):
         super(AddUserDialog, self).__init__(parent)
+        self.labelUsername = QtWidgets.QLabel(self)
+        self.labelUsername.setText("Имя пользователя:")
         self.usernameLineEdit = QtWidgets.QLineEdit(self)
-        self.passwd1Line_edit = QtWidgets.QLineEdit(self)
+        self.labelPasswd1 = QtWidgets.QLabel(self)
+        self.labelPasswd1.setText("Пароль:")
+        self.passwd1LineEdit = QtWidgets.QLineEdit(self)
         self.passwd2LineEdit = QtWidgets.QLineEdit(self)
-        self.passwd1Line_edit.setEchoMode(QtWidgets.QLineEdit.EchoMode.Password)
+        self.labelPasswd2 = QtWidgets.QLabel(self)
+        self.labelPasswd2.setText("Повторите пароль:")
+        self.passwd1LineEdit.setEchoMode(QtWidgets.QLineEdit.EchoMode.Password)
         self.passwd2LineEdit.setEchoMode(QtWidgets.QLineEdit.EchoMode.Password)
-        self.buttonSaveUser = QtWidgets.QPushButton("Сохранить", self)
+        self.buttonSaveUser = QtWidgets.QPushButton("Сохранить")
         self.buttonSaveUser.clicked.connect(self.handle_registration)
         layout = QtWidgets.QVBoxLayout(self)
+        layout.addWidget(self.labelUsername)
         layout.addWidget(self.usernameLineEdit)
-        layout.addWidget(self.passwd1Line_edit)
+        layout.addWidget(self.labelPasswd1)
+        layout.addWidget(self.passwd1LineEdit)
+        layout.addWidget(self.labelPasswd2)
         layout.addWidget(self.passwd2LineEdit)
         layout.addWidget(self.buttonSaveUser)
-        self.username = None
-        self.password = None
 
     def handle_registration(self):
-        if self.passwd1Line_edit.text() == self.passwd2LineEdit.text():
-            self.username = self.usernameLineEdit.text()
-            self.password = self.passwd1Line_edit.text()
+        if self.passwd1LineEdit.text() == self.passwd2LineEdit.text():
+            username = self.usernameLineEdit.text()
+            password1 = self.passwd1LineEdit.text()
+            password2 = self.passwd2LineEdit.text()
+            if password1 == password2:
+                self.accept_creds.emit(username, password1)
+                self.close()
         else:
             QtWidgets.QMessageBox.warning(self, "Ошибка", "Пароли не совпадают")
-
-    def get_credentials(self):
-        return self.username, self.password

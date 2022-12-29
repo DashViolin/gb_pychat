@@ -5,6 +5,8 @@ from contextlib import suppress
 
 from sqlalchemy.exc import IntegrityError, NoResultFound
 
+from config import CommonConf
+
 from .server_model import Contact, History, Message, Session, User
 
 
@@ -22,8 +24,8 @@ class ServerStorage:
 
     def user_auth(self, username: str, password: str):
         if self.check_user_exists:
-            password = self.get_passwd_hash(username=username, password=password)  # type: ignore
-            db_password = self.get_user_password(username=username)
+            password = self.make_passwd_hash(username=username, password=password)
+            db_password = self.get_user_password_hash(username=username)
             if password == db_password:
                 return True
         return False
@@ -38,11 +40,13 @@ class ServerStorage:
             self.session.commit()
             return True
 
-    def get_passwd_hash(self, username: str, password: str):
-        pswd_hash = hashlib.pbkdf2_hmac("sha256", password=password, salt=username, iterations=10000)  # type: ignore
-        return binascii.hexlify(pswd_hash)
+    def make_passwd_hash(self, username: str, password: str):
+        b_salt = username.encode(CommonConf.ENCODING)
+        b_password = password.encode(CommonConf.ENCODING)
+        pswd_hash = hashlib.pbkdf2_hmac("sha256", password=b_password, salt=b_salt, iterations=10000)
+        return binascii.hexlify(pswd_hash).decode(CommonConf.ENCODING)
 
-    def get_user_password(self, username: str):
+    def get_user_password_hash(self, username: str):
         try:
             user = self.session.query(User).filter_by(username=username).one()
             return user.password
@@ -51,7 +55,7 @@ class ServerStorage:
 
     def register_user(self, username, status=None, password=None, ip_address=None):
         if password:
-            password = self.get_passwd_hash(username=username, password=password)
+            password = self.make_passwd_hash(username=username, password=password)
         try:
             user = self.session.query(User).filter_by(username=username).one()
         except NoResultFound:

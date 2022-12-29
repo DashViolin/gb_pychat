@@ -29,13 +29,14 @@ class JIMClient(JIMBase, ContextDecorator):
     port = PortDescriptor()
     socket_lock = Lock()
 
-    def __init__(self, ip: str, port: int, username: str) -> None:
+    def __init__(self, ip: str, port: int, username: str, password: str) -> None:
         super().__init__()
         self.ip = ip_address(ip)
         self.port = port
         self.server_name = f"{self.ip}:{self.port}"
         self.sock = socket(AF_INET, SOCK_STREAM)
         self.username = username
+        self.password = password
         self.msg_factory = ClientMessages(self.username, self.encoding)
         self.storage = ClientStorage(self.username)
         self.notifier = SignalNotifier()
@@ -55,7 +56,7 @@ class JIMClient(JIMBase, ContextDecorator):
         while True:
             try:
                 self.sock.connect((str(self.ip), self.port))
-                if self.authenticate(password=password):
+                if self.authenticate():
                     match response[Keys.RESPONSE]:  # type: ignore
                         case HTTPStatus.OK:
                             main_logger.info(f"Успешно подключен к серверу {self.server_name} от имени {self.username}")
@@ -91,9 +92,9 @@ class JIMClient(JIMBase, ContextDecorator):
                     continue
                 break
 
-    def authenticate(self, password: str):
+    def authenticate(self):
         with self.socket_lock:
-            msg = self.msg_factory.make_authenticate_msg(password=password)
+            msg = self.msg_factory.make_authenticate_msg(password=self.password)
             resp = self._send_data(msg)
         if resp[Keys.RESPONSE] == HTTPStatus.OK:  # type: ignore
             return True

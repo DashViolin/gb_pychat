@@ -74,16 +74,16 @@ class JIMServer(JIMBase, ContextDecorator):
                 for client in r_clients:
                     self._accept_message(client)
                 self._cleanup_disconnected_users()
-                self._process_messages_queue()
+                self._process_messages()
 
-    def _process_messages_queue(self):
+    def _process_messages(self):
         active_users = self.storage.get_active_users()
         for user in active_users:
             client_conn = self.active_clients[user]
             for msg_id, msg in self.storage.get_user_messages(user_to=user):
                 try:
                     self._send(msg=msg, client=client_conn)
-                    sleep(0.1)
+                    sleep(0.01)
                 except (OSError, ConnectionRefusedError, ConnectionResetError, BrokenPipeError):
                     self._disconnect_client(conn=client_conn, user=user)
                     break

@@ -76,27 +76,34 @@ class Application:
             self.client.notifier.new_message.connect(self._on_accepted_new_message)
             self.client.notifier.connection_lost.connect(self._on_connection_lost)
 
+    def show_standard_warning(self, info: str, title: str = "Ошибка", text: str = ""):
+        msg = QtWidgets.QMessageBox()
+        msg.setWindowIcon(self.app.style().standardIcon(QtWidgets.QStyle.StandardPixmap.SP_MessageBoxWarning))
+        msg.setWindowTitle(title)
+        msg.setText(text)
+        msg.setInformativeText(info)
+        msg.setStandardButtons(QtWidgets.QMessageBox.StandardButton.Ok)
+        msg.exec()
+
     def _on_click_connect(self):
         def show_empty_params_message(empty_params):
-            msg = QtWidgets.QMessageBox()
-            msg.setWindowIcon(self.app.style().standardIcon(QtWidgets.QStyle.StandardPixmap.SP_MessageBoxWarning))
-            msg.setWindowTitle("Ошибка")
-            msg.setText("Ошибка подключения к серверу.")
-            msg.setInformativeText(f"Не указаны параметры: {', '.join(empty_params)}")
-            msg.setStandardButtons(QtWidgets.QMessageBox.StandardButton.Ok)
-            msg.exec()
+            text = "Ошибка подключения к серверу."
+            info = f"Не указаны параметры: {', '.join(empty_params)}"
+            self.show_standard_warning(info=info, text=text)
 
         if self.ui.pushButtonConnect.text() == self._connect_btn_label:
             ip = self.ui.lineEditIP.text()
             port = self.ui.lineEditPort.text()
             username = self.ui.lineEditUsername.text()
+            password = self.ui.lineEditPasswd.text()
             conn_params = {
                 "IP адрес": ip,
                 "Порт сервера": port,
                 "Имя пользователя": username,
+                "Пароль": password,
             }
             if all(conn_params.values()):
-                self.client = JIMClient(ip=ip, port=int(port), username=username)
+                self.client = JIMClient(ip=ip, port=int(port), username=username, password=password)
                 self.client_task = Thread(target=self.client.run)
                 self.client_task.daemon = True
                 self.client_task.start()
@@ -191,12 +198,7 @@ class Application:
             self._fill_contacts()
 
     def _on_connection_lost(self):
-        msg = QtWidgets.QMessageBox()
-        msg.setWindowIcon(self.app.style().standardIcon(QtWidgets.QStyle.StandardPixmap.SP_MessageBoxWarning))
-        msg.setWindowTitle("Ошибка")
-        msg.setInformativeText(f"Потеряно соединение с сервером.")
-        msg.setStandardButtons(QtWidgets.QMessageBox.StandardButton.Ok)
-        msg.exec()
+        self.show_standard_warning(info="Потеряно соединение с сервером.")
 
         self._set_defaults()
         if self.client:
