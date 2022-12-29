@@ -45,7 +45,7 @@ class ClientStorage:
         self.session.commit()
 
     def get_contact_list(self):
-        query = self.session.query(User).all()
+        query = self.session.query(User).filter_by(is_active=True).all()
         users = [(entry.username, entry.is_active) for entry in query]
         return list(sorted(sorted(users, key=lambda x: x[0]), key=lambda x: x[1], reverse=True))
 

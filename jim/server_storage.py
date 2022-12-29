@@ -1,3 +1,5 @@
+import binascii
+import hashlib
 import json
 from contextlib import suppress
 
@@ -12,6 +14,9 @@ class ServerStorage:
         self.set_all_users_inactive()
 
     def register_user(self, username, status=None, password=None, ip_address=None):
+        if password:
+            pswd_hash = hashlib.pbkdf2_hmac("sha256", password=password, salt=username, iterations=10000)
+            password = binascii.hexlify(pswd_hash)
         try:
             user = self.session.query(User).filter_by(username=username).one()
         except NoResultFound:

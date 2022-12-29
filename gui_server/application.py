@@ -23,12 +23,15 @@ class Application:
         self.history_window = HistoryWindow()
         self._create_bindings()
         self.server_task = None
+        self.server_storage = ServerStorage()
 
     def run(self):
         self.main_window.show()
         sys.exit(self.app.exec())
 
     def _create_bindings(self):
+        self.ui.pushButtonAddContact.clicked.connect(self._on_click_add_user)
+        self.ui.pushButtonDeleteContact.clicked.connect(self._on_click_del_user)
         self.ui.pushButtonClients.clicked.connect(self._on_click_show_clients)
         self.ui.pushButtonHistory.clicked.connect(self._on_click_show_history)
         self.ui.pushButtonStartServer.clicked.connect(self._on_click_start_server)
@@ -60,6 +63,18 @@ class Application:
 
     def _on_click_show_clients(self):
         self.clients_window.show()
+
+    def _on_click_add_user(self):
+        username, ok = QtWidgets.QInputDialog.getText(self.main_window, "Добавление пользователя", "Введите имя:")
+        if not ok:
+            return
+        password, ok = QtWidgets.QInputDialog.getText(self.main_window, "Добавление пользователя", "Введите пароль:")
+        if not ok:
+            return
+        self.server_storage.register_user(username=username, password=password)
+
+    def _on_click_del_user(self):
+        pass
 
 
 class HistoryWindow:
