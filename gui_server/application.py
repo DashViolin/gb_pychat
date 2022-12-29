@@ -65,16 +65,34 @@ class Application:
         self.clients_window.show()
 
     def _on_click_add_user(self):
-        username, ok = QtWidgets.QInputDialog.getText(self.main_window, "Добавление пользователя", "Введите имя:")
-        if not ok:
-            return
-        password, ok = QtWidgets.QInputDialog.getText(self.main_window, "Добавление пользователя", "Введите пароль:")
-        if not ok:
-            return
-        self.server_storage.register_user(username=username, password=password)
+        user_add_from = AddUserDialog()
+        user_add_from.show()
+        username, password = user_add_from.get_credentials()
+        if username and password:
+            if not self.server_storage.check_user_exists(username=username):
+                self.server_storage.register_user(username=username, password=password)
+            else:
+                self.show_standard_warning(info="Пользовтель с таким именем уже существует")
+        else:
+            self.show_standard_warning(info='Поля "имя пользователя" и "пароль" не должны быть пустыми')
 
     def _on_click_del_user(self):
-        pass
+        username, ok = QtWidgets.QInputDialog.getText(self.main_window, "Удаление пользователя", "Введите имя:")
+        if ok:
+            if self.server_storage.check_user_exists(username=username):
+                res = self.server_storage.remove_user(username=username)
+                if not res:
+                    self.show_standard_warning(info="Ошибка удаления пользователя")
+            else:
+                self.show_standard_warning(info="Пользователь с таким именем отсутсвует")
+
+    def show_standard_warning(self, info: str, title: str = "Ошибка"):
+        msg = QtWidgets.QMessageBox()
+        msg.setWindowIcon(self.app.style().standardIcon(QtWidgets.QStyle.StandardPixmap.SP_MessageBoxWarning))
+        msg.setWindowTitle(title)
+        msg.setInformativeText(info)
+        msg.setStandardButtons(QtWidgets.QMessageBox.StandardButton.Ok)
+        msg.exec()
 
 
 class HistoryWindow:
@@ -132,3 +150,32 @@ class ClientsWindow:
         for index, user in enumerate(active_users):
             item_user = QtWidgets.QTableWidgetItem(user)
             self.ui.tableWidget.setItem(index, 0, item_user)
+
+
+class AddUserDialog(QtWidgets.QDialog):
+    def __init__(self, parent=None):
+        super(AddUserDialog, self).__init__(parent)
+        self.usernameLineEdit = QtWidgets.QLineEdit(self)
+        self.passwd1Line_edit = QtWidgets.QLineEdit(self)
+        self.passwd2LineEdit = QtWidgets.QLineEdit(self)
+        self.passwd1Line_edit.setEchoMode(QtWidgets.QLineEdit.EchoMode.Password)
+        self.passwd2LineEdit.setEchoMode(QtWidgets.QLineEdit.EchoMode.Password)
+        self.buttonSaveUser = QtWidgets.QPushButton("Сохранить", self)
+        self.buttonSaveUser.clicked.connect(self.handle_registration)
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.addWidget(self.usernameLineEdit)
+        layout.addWidget(self.passwd1Line_edit)
+        layout.addWidget(self.passwd2LineEdit)
+        layout.addWidget(self.buttonSaveUser)
+        self.username = None
+        self.password = None
+
+    def handle_registration(self):
+        if self.passwd1Line_edit.text() == self.passwd2LineEdit.text():
+            self.username = self.usernameLineEdit.text()
+            self.password = self.passwd1Line_edit.text()
+        else:
+            QtWidgets.QMessageBox.warning(self, "Ошибка", "Пароли не совпадают")
+
+    def get_credentials(self):
+        return self.username, self.password

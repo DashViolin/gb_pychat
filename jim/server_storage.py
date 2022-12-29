@@ -13,10 +13,45 @@ class ServerStorage:
         self.session = Session()
         self.set_all_users_inactive()
 
+    def check_user_exists(self, username: str):
+        try:
+            self.session.query(User).filter_by(username=username).one()
+            return True
+        except NoResultFound:
+            return False
+
+    def user_auth(self, username: str, password: str):
+        if self.check_user_exists:
+            password = self.get_passwd_hash(username=username, password=password)  # type: ignore
+            db_password = self.get_user_password(username=username)
+            if password == db_password:
+                return True
+        return False
+
+    def remove_user(self, username: str):
+        try:
+            user = self.session.query(User).filter_by(username=username).one()
+        except NoResultFound:
+            return False
+        else:
+            self.session.delete(user)
+            self.session.commit()
+            return True
+
+    def get_passwd_hash(self, username: str, password: str):
+        pswd_hash = hashlib.pbkdf2_hmac("sha256", password=password, salt=username, iterations=10000)  # type: ignore
+        return binascii.hexlify(pswd_hash)
+
+    def get_user_password(self, username: str):
+        try:
+            user = self.session.query(User).filter_by(username=username).one()
+            return user.password
+        except NoResultFound:
+            return None
+
     def register_user(self, username, status=None, password=None, ip_address=None):
         if password:
-            pswd_hash = hashlib.pbkdf2_hmac("sha256", password=password, salt=username, iterations=10000)
-            password = binascii.hexlify(pswd_hash)
+            password = self.get_passwd_hash(username=username, password=password)
         try:
             user = self.session.query(User).filter_by(username=username).one()
         except NoResultFound:
