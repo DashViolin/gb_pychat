@@ -17,7 +17,7 @@ class TestJIMClient(TestCase):
         self.mock_resp.update(self.mock_time)
         self.ip = "127.0.0.1"
         self.port = 7777
-        self.client = JIMClient(ip=self.ip, port=self.port, username=self.username)
+        self.client = JIMClient(ip=self.ip, port=self.port, username=self.username, password="")
         self.client.close()
         self.client.sock = mock.Mock()
         self.client.sock.connect.return_value = None

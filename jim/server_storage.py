@@ -1,7 +1,10 @@
+import binascii
+import hashlib
 import json
-from contextlib import suppress
 
-from sqlalchemy.exc import IntegrityError, NoResultFound
+from sqlalchemy.exc import NoResultFound
+
+from config import CommonConf
 
 from .server_model import Contact, History, Message, Session, User
 
@@ -11,19 +14,64 @@ class ServerStorage:
         self.session = Session()
         self.set_all_users_inactive()
 
-    def register_user(self, username, status=None, password=None, ip_address=None):
+    def check_user_exists(self, username: str):
+        try:
+            self.session.query(User).filter_by(username=username).one()
+            return True
+        except NoResultFound:
+            return False
+
+    def user_auth(self, username: str, password: str):
+        if self.check_user_exists:
+            password = self.make_passwd_hash(username=username, password=password)
+            db_password = self.get_user_password_hash(username=username)
+            if password == db_password:
+                return True
+        return False
+
+    def remove_user(self, username: str):
         try:
             user = self.session.query(User).filter_by(username=username).one()
         except NoResultFound:
-            user = User(username=username, password=password, status=status)
+            return False
+        else:
+            self.session.delete(user)
+            self.session.commit()
+            return True
+
+    def make_passwd_hash(self, username: str, password: str):
+        b_salt = username.encode(CommonConf.ENCODING)
+        b_password = password.encode(CommonConf.ENCODING)
+        pswd_hash = hashlib.pbkdf2_hmac("sha256", password=b_password, salt=b_salt, iterations=10000)
+        return binascii.hexlify(pswd_hash).decode(CommonConf.ENCODING)
+
+    def get_user_password_hash(self, username: str):
+        try:
+            user = self.session.query(User).filter_by(username=username).one()
+            return user.password
+        except NoResultFound:
+            return None
+
+    def register_user_login(self, username, status=None, ip_address=None):
+        user = self.session.query(User).filter_by(username=username).one()
         if ip_address:
             user.history.append(History(ip_address=ip_address))
+        if status:
+            user.status = status
+            self.session.add(user)
+            self.session.commit()
+
+    def add_user(self, username, password):
+        password = self.make_passwd_hash(username=username, password=password)
+        user = User(username=username, password=password)
         self.session.add(user)
         self.session.commit()
 
-    def change_user_status(self, username: str, is_active: bool):
+    def change_user_status(self, username: str, is_active: bool, status: str = ""):
         user = self.session.query(User).filter_by(username=username).one()
         user.is_active = is_active
+        if status:
+            user.status = status
         self.session.add(user)
         self.session.commit()
 
@@ -50,9 +98,6 @@ class ServerStorage:
         self.session.commit()
 
     def register_contacts(self, username, contact_name):
-        with suppress(IntegrityError):
-            self.register_user(username=username)
-            self.register_user(username=contact_name)
         user_from_query = self.session.query(User).filter_by(username=username).one()
         user_to_query = self.session.query(User).filter_by(username=contact_name).one()
         user_from_query.contacts.append(user_to_query)
@@ -93,14 +138,17 @@ class ServerStorage:
             contact = self.session.query(User).filter_by(username=contact_name).one()
             self.session.query(Contact).filter_by(user_id=user.id, contact_id=contact.id).update({"is_active": False})
             self.session.commit()
+            return True
         except NoResultFound:
-            pass
+            return False
 
     def add_contact(self, username: str, contact_name: str):
         try:
             user = self.session.query(User).filter_by(username=username).one()
             contact = self.session.query(User).filter_by(username=contact_name).one()
+            user.contacts.append(contact)
             self.session.query(Contact).filter_by(user_id=user.id, contact_id=contact.id).update({"is_active": True})
             self.session.commit()
+            return True
         except NoResultFound:
-            self.register_contacts(username=username, contact_name=contact_name)
+            return False

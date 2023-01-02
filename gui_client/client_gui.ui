@@ -37,16 +37,6 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="2">
-           <widget class="QLineEdit" name="lineEditUsername"/>
-          </item>
-          <item row="1" column="3">
-           <widget class="QPushButton" name="pushButtonConnect">
-            <property name="text">
-             <string>Подключиться</string>
-            </property>
-           </widget>
-          </item>
           <item row="0" column="0">
            <widget class="QLabel" name="labelIP">
             <property name="text">
@@ -54,10 +44,10 @@
             </property>
            </widget>
           </item>
-          <item row="0" column="2">
-           <widget class="QLabel" name="labelUsername">
+          <item row="1" column="4">
+           <widget class="QPushButton" name="pushButtonConnect">
             <property name="text">
-             <string>Имя пользователя:</string>
+             <string>Подключиться</string>
             </property>
            </widget>
           </item>
@@ -68,10 +58,34 @@
             </property>
            </widget>
           </item>
+          <item row="1" column="2">
+           <widget class="QLineEdit" name="lineEditUsername"/>
+          </item>
+          <item row="0" column="2">
+           <widget class="QLabel" name="labelUsername">
+            <property name="text">
+             <string>Имя пользователя:</string>
+            </property>
+           </widget>
+          </item>
           <item row="1" column="1">
            <widget class="QLineEdit" name="lineEditPort">
             <property name="placeholderText">
              <string>7777</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="3">
+           <widget class="QLineEdit" name="lineEditPasswd">
+            <property name="echoMode">
+             <enum>QLineEdit::Password</enum>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="3">
+           <widget class="QLabel" name="labelPasswd">
+            <property name="text">
+             <string>Пароль:</string>
             </property>
            </widget>
           </item>

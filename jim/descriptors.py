@@ -3,6 +3,7 @@ class PortDescriptor:
         return instance.__dict__[self.name]
 
     def __set__(self, instance, value):
+        value = int(value)
         if not 1023 < value < 65536:
             raise ValueError("Номер порта должен быть положительным числом в диапазоне [1024, 65535].")
         instance.__dict__[self.name] = value

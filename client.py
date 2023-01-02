@@ -3,8 +3,8 @@ import sys
 
 from config import ClientConf
 from jim.client import JIMClient
+from jim.decorators import log
 from logger.client_log_config import call_logger, main_logger
-from logger.decorator import log
 
 
 @log(call_logger)
@@ -47,7 +47,7 @@ if __name__ == "__main__":
     try:
         username, ip, port = parse_args()
         with JIMClient(ip=ip, port=port, username=username) as jim_client:
-            jim_client.run()
+            jim_client.run(password="")
 
     except KeyboardInterrupt:
         main_logger.info("Работа клиента была принудительно завершена.")

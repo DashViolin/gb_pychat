@@ -4,6 +4,7 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+
         {
             "name": "Current file",
             "type": "python",
@@ -13,10 +14,18 @@
             "justMyCode": true
         },
         {
-            "name": "Server",
+            "name": "Server GUI",
             "type": "python",
             "request": "launch",
             "program": "./server.pyw",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Console Server",
+            "type": "python",
+            "request": "launch",
+            "program": "./server.py",
             "console": "integratedTerminal",
             "justMyCode": true
         },
@@ -29,7 +38,7 @@
             "justMyCode": true
         },
         {
-            "name": "Client",
+            "name": "Client GUI",
             "type": "python",
             "request": "launch",
             "program": "./client.pyw",

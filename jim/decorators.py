@@ -17,3 +17,11 @@ def log(logger):
         return wrapper
 
     return decorator
+
+
+def login_required(fnc):
+    @wraps(fnc)
+    def check(*args, **kwargs):
+        return fnc(*args, **kwargs)
+
+    return check
