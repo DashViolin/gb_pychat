@@ -8,6 +8,7 @@ from PyQt6 import QtGui, QtWidgets
 from config import ClientConf
 from gui_client.main_window import Ui_MainWindow
 from jim.client import JIMClient
+from jim.schema import Keys
 
 browser_msg_template = dedent(
     """
@@ -36,6 +37,9 @@ class Application:
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self.main_window)
 
+        self._connect_btn_label = "Подключиться"
+        self._disconnect_btn_label = "Отключиться"
+
         self.client: JIMClient | None = None
         self.prev_contact_item: QtWidgets.QListWidgetItem | None = None
         self.chat_tamplate = Template(browser_msg_template)
@@ -47,6 +51,7 @@ class Application:
         sys.exit(self.app.exec())
 
     def _set_defaults(self):
+        self.ui.pushButtonConnect.setText(self._connect_btn_label)
         self.ui.listWidgetContacts.clear()
         self.ui.textBrowserChat.clear()
         self.ui.textEditMessage.clear()
@@ -69,38 +74,62 @@ class Application:
 
     def _bind_client_signals(self):
         if self.client:
-            self.client.notifier.new_message.connect(self.new_message)
-            self.client.notifier.connection_lost.connect(self.connection_lost)
+            self.client.notifier.new_message.connect(self._on_accept_new_message)
+            self.client.notifier.connection_lost.connect(self._on_connection_lost)
+            self.client.notifier.contacts_updated.connect(self._fill_contacts)
+
+    def show_standard_warning(self, info: str, title: str = "Ошибка", text: str = "", is_warning: bool = True):
+        msg = QtWidgets.QMessageBox()
+        if is_warning:
+            msg.setWindowIcon(self.app.style().standardIcon(QtWidgets.QStyle.StandardPixmap.SP_MessageBoxWarning))
+        else:
+            msg.setWindowIcon(self.app.style().standardIcon(QtWidgets.QStyle.StandardPixmap.SP_MessageBoxInformation))
+        msg.setWindowTitle(title)
+        msg.setText(text)
+        msg.setInformativeText(info)
+        msg.setStandardButtons(QtWidgets.QMessageBox.StandardButton.Ok)
+        msg.exec()
 
     def _on_click_connect(self):
         def show_empty_params_message(empty_params):
-            msg = QtWidgets.QMessageBox()
-            msg.setWindowIcon(self.app.style().standardIcon(QtWidgets.QStyle.StandardPixmap.SP_MessageBoxWarning))
-            msg.setWindowTitle("Ошибка")
-            msg.setText("Ошибка подключения к серверу.")
-            msg.setInformativeText(f"Не указаны параметры: {', '.join(empty_params)}")
-            msg.setStandardButtons(QtWidgets.QMessageBox.StandardButton.Ok)
-            msg.exec()
+            text = "Ошибка подключения к серверу."
+            info = f"Не указаны параметры: {', '.join(empty_params)}"
+            self.show_standard_warning(info=info, text=text)
 
-        ip = self.ui.lineEditIP.text()
-        port = self.ui.lineEditPort.text()
-        username = self.ui.lineEditUsername.text()
-        conn_params = {
-            "IP адрес": ip,
-            "Порт сервера": port,
-            "Имя пользователя": username,
-        }
-        if all(conn_params.values()):
-            self.client = JIMClient(ip=ip, port=int(port), username=username)
-            self.client_task = Thread(target=self.client.run)
-            self.client_task.daemon = True
-            self.client_task.start()
-            self._bind_client_signals()
-            self._switch_controls(is_enabled=True)
-            self._fill_contacts()
+        if self.ui.pushButtonConnect.text() == self._connect_btn_label:
+            ip = self.ui.lineEditIP.text()
+            port = self.ui.lineEditPort.text()
+            username = self.ui.lineEditUsername.text()
+            password = self.ui.lineEditPasswd.text()
+            conn_params = {
+                "IP адрес": ip,
+                "Порт сервера": port,
+                "Имя пользователя": username,
+                "Пароль": password,
+            }
+            if all(conn_params.values()):
+                self.client = JIMClient(ip=ip, port=port, username=username, password=password)
+                ok, resp = self.client.authenticate()
+                if ok:
+                    self._bind_client_signals()
+                    self._switch_controls(is_enabled=True)
+                    self.client_task = Thread(target=self.client.run)
+                    self.client_task.daemon = True
+                    self.client_task.start()
+                    self._fill_contacts()
+                    self.ui.pushButtonConnect.setText(self._disconnect_btn_label)
+                elif resp:
+                    message = resp.get(Keys.ALERT) or resp.get(Keys.ERROR)
+                    self.show_standard_warning(info=message)  # type: ignore
+                else:
+                    self.show_standard_warning(info="Не удалось подключиться к серверу")  # type: ignore
+            else:
+                empty_params = [key for key, value in conn_params.items() if not value]
+                show_empty_params_message(empty_params)
         else:
-            empty_params = [key for key, value in conn_params.items() if not value]
-            show_empty_params_message(empty_params)
+            if self.client:
+                self.client.close()
+            self._set_defaults()
 
     def _fill_contacts(self):
         self.ui.listWidgetContacts.clear()
@@ -110,7 +139,7 @@ class Application:
                 item = QtWidgets.QListWidgetItem()
                 item.setText(contact)
                 if is_active:
-                    item.setBackground(QtGui.QColor("lightGray"))
+                    item.setForeground(QtGui.QColor("gray"))
                 self.ui.listWidgetContacts.addItem(item)
 
     def _fill_chat(self, contact_name):
@@ -123,13 +152,13 @@ class Application:
                 )
             ]
             if messages:
-                chat_text = self.make_chat(messages=messages, current_user=self.client.username)
+                chat_text = self._make_chat_text(messages=messages, current_user=self.client.username)
                 self.ui.textBrowserChat.setText(chat_text)
                 self.ui.textBrowserChat.verticalScrollBar().setValue(
                     self.ui.textBrowserChat.verticalScrollBar().maximum()
                 )
 
-    def make_chat(self, messages: list[dict], current_user: str):
+    def _make_chat_text(self, messages: list[dict], current_user: str):
         data = {
             "messages": messages,
             "current_user": current_user,
@@ -139,54 +168,59 @@ class Application:
 
     def _on_contact_double_click(self):
         contact_item = self.ui.listWidgetContacts.currentItem()
-        originalBG = contact_item.background()
-        if self.prev_contact_item:
-            self.prev_contact_item.setBackground(originalBG)
-        contact_item.setBackground(QtGui.QColor("lightBlue"))
-        self.prev_contact_item = contact_item
         contact_name = contact_item.text()
         self._fill_chat(contact_name=contact_name)
 
     def _on_click_send(self):
-        contact = self.ui.listWidgetContacts.currentItem().text()
-        if self.client and contact:
-            msg_text = self.ui.textEditMessage.toPlainText()
-            if msg_text:
-                self.client.send_msg(contact=contact, msg_text=msg_text)
-                self._fill_chat(contact_name=contact)
-                self.ui.textEditMessage.clear()
+        try:
+            contact = self.ui.listWidgetContacts.currentItem().text()
+            if self.client and contact:
+                msg_text = self.ui.textEditMessage.toPlainText()
+                if msg_text:
+                    self.client.send_msg(contact=contact, msg_text=msg_text)
+                    self._fill_chat(contact_name=contact)
+                    self.ui.textEditMessage.clear()
+        except AttributeError:
+            self.show_standard_warning("Выберите контакт из списка")
 
     def _on_click_add_contact(self):
-        contact = self.show_add_contact_dialog()
+        contact = self._show_add_contact_dialog()
         if contact and self.client:
-            self.client.add_contact(contact_name=contact)
-            self._fill_contacts()
+            ok = self.client.add_contact(contact_name=contact)
+            if ok:
+                self._fill_contacts()
+            else:
+                self.show_standard_warning(info="Контакт не найден")
 
     def _on_click_delete_contact(self):
-        contact = self.ui.listWidgetContacts.currentItem().text()
-        if contact and self.client:
-            self.client.delete_contact(contact_name=contact)
-            self._fill_contacts()
+        try:
+            contact = self.ui.listWidgetContacts.currentItem().text()
+            if contact and self.client:
+                ok = self.client.delete_contact(contact_name=contact)
+                if ok:
+                    self._fill_contacts()
+                else:
+                    self.show_standard_warning(info="Контакт не найден")
+        except AttributeError:
+            self.show_standard_warning("Выберите контакт из списка")
 
-    def show_add_contact_dialog(self):
+    def _show_add_contact_dialog(self):
         contact, ok = QtWidgets.QInputDialog.getText(self.main_window, "Добавление пользователя", "Введите имя:")
         if ok:
             return contact
         return None
 
-    def new_message(self, sender):
-        if sender == self.ui.listWidgetContacts.currentItem().text():
-            self._fill_chat(sender)
-        else:
+    def _on_accept_new_message(self, sender):
+        try:
+            if sender == self.ui.listWidgetContacts.currentItem().text():
+                self._fill_chat(sender)
+        except AttributeError:
+            pass
+        finally:
             self._fill_contacts()
 
-    def connection_lost(self):
-        msg = QtWidgets.QMessageBox()
-        msg.setWindowIcon(self.app.style().standardIcon(QtWidgets.QStyle.StandardPixmap.SP_MessageBoxWarning))
-        msg.setWindowTitle("Ошибка")
-        msg.setInformativeText(f"Потеряно соединение с сервером.")
-        msg.setStandardButtons(QtWidgets.QMessageBox.StandardButton.Ok)
-        msg.exec()
+    def _on_connection_lost(self):
+        self.show_standard_warning(info="Потеряно соединение с сервером.")
 
         self._set_defaults()
         if self.client:

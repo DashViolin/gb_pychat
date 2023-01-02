@@ -9,6 +9,7 @@ import config
 from logger.server_log_config import main_logger
 
 from .base import JIMBase
+from .decorators import login_required
 from .descriptors import PortDescriptor
 from .errors import IncorrectDataRecivedError, NonDictInputError, ReqiuredFieldMissingError
 from .schema import Actions, Keys
@@ -71,18 +72,18 @@ class JIMServer(JIMBase, ContextDecorator):
                 except OSError:
                     pass
                 for client in r_clients:
-                    self._route_msg(client)
+                    self._accept_message(client)
                 self._cleanup_disconnected_users()
-                self._process_messages_queue()
+                self._process_messages()
 
-    def _process_messages_queue(self):
+    def _process_messages(self):
         active_users = self.storage.get_active_users()
         for user in active_users:
             client_conn = self.active_clients[user]
             for msg_id, msg in self.storage.get_user_messages(user_to=user):
                 try:
                     self._send(msg=msg, client=client_conn)
-                    sleep(0.1)
+                    sleep(0.01)
                 except (OSError, ConnectionRefusedError, ConnectionResetError, BrokenPipeError):
                     self._disconnect_client(conn=client_conn, user=user)
                     break
@@ -116,7 +117,7 @@ class JIMServer(JIMBase, ContextDecorator):
     def close(self):
         self.sock.close()
 
-    def _route_msg(self, client_conn: socket):
+    def _accept_message(self, client_conn: socket):
         response_code = HTTPStatus.OK
         response_descr = ""
         disconnect_client = False
@@ -124,44 +125,13 @@ class JIMServer(JIMBase, ContextDecorator):
         if msg:
             try:
                 self._validate_msg(msg)
-                match msg.get(Keys.ACTION):
-                    case Actions.PRESENCE | Actions.AUTH:
-                        username = msg[Keys.USER][Keys.ACCOUNT_NAME]
-                        if username not in self.active_clients:
-                            self.active_clients[username] = client_conn
-                            passwd = msg[Keys.USER].get(Keys.PASSWORD)
-                            status = msg[Keys.USER].get(Keys.STATUS)
-                            ip = client_conn.getpeername()[0]
-                            self.storage.register_user(username=username, password=passwd, status=status, ip_address=ip)
-                            self.storage.change_user_status(username=username, is_active=True)
-                        else:
-                            response_code = HTTPStatus.FORBIDDEN
-                            response_descr = "Клиент с таким именем уже зарегистрирован на сервере"
-                            disconnect_client = True
-                    case Actions.MSG:
-                        username = msg[Keys.FROM]
-                        target_user = msg[Keys.TO]
-                        self.storage.store_msg(user_from=username, user_to=target_user, msg=msg)
-                    case Actions.CONTACTS:
-                        username = msg[Keys.ACCOUNT_NAME]
-                        contacts = self.storage.get_user_contacts(username=username)
-                        response_code = HTTPStatus.ACCEPTED
-                        response_descr = contacts
-                    case Actions.ADD_CONTACT:
-                        username = msg[Keys.ACCOUNT_NAME]
-                        contact = msg[Keys.CONTACT]
-                        self.storage.add_contact(username=username, contact_name=contact)
-                    case Actions.DEL_CONTACT:
-                        username = msg[Keys.ACCOUNT_NAME]
-                        contact = msg[Keys.CONTACT]
-                        self.storage.delete_contact(username=username, contact_name=contact)
-                    case Actions.QUIT:
-                        disconnect_client = True
-                    case Actions.JOIN | Actions.LEAVE:
-                        response_code = HTTPStatus.BAD_REQUEST
-                    case _:
-                        response_code = HTTPStatus.BAD_REQUEST
-
+                main_logger.debug(f"Принято сообщение: {msg}")
+                if msg.get(Keys.ACTION) == Actions.AUTH:
+                    response_code, response_descr, disconnect_client = self._register_user(
+                        client_conn=client_conn, msg=msg
+                    )
+                else:
+                    response_code, response_descr, disconnect_client = self._route_msg(msg=msg)
             except (NonDictInputError, IncorrectDataRecivedError) as ex:
                 response_code = HTTPStatus.INTERNAL_SERVER_ERROR
                 response_descr = str(ex)
@@ -177,8 +147,71 @@ class JIMServer(JIMBase, ContextDecorator):
             finally:
                 response = self._make_response_msg(code=response_code, description=response_descr)
                 self._send(msg=response, client=client_conn)
+                main_logger.debug(f"Отправлен ответ: {response}")
                 if disconnect_client:
                     self._disconnect_client(client_conn)
+
+    def _register_user(self, client_conn: socket, msg: dict):
+        response_code = HTTPStatus.OK
+        response_descr = ""
+        disconnect_client = False
+        username = msg[Keys.USER][Keys.ACCOUNT_NAME]
+
+        if username not in self.active_clients:
+            passwd = msg[Keys.USER].get(Keys.PASSWORD)
+            ip = client_conn.getpeername()[0]
+            if self.storage.user_auth(username=username, password=passwd):
+                if username not in self.active_clients:
+                    self.active_clients[username] = client_conn
+                    self.storage.register_user_login(username=username, ip_address=ip)
+                else:
+                    response_code = HTTPStatus.FORBIDDEN
+                    response_descr = "Клиент с таким именем уже зарегистрирован на сервере"
+                    disconnect_client = True
+            else:
+                response_code = HTTPStatus.FORBIDDEN
+                response_descr = "Неверное имя пользователя или пароль"
+                disconnect_client = True
+        return response_code, response_descr, disconnect_client
+
+    @login_required
+    def _route_msg(self, msg: dict):
+        response_code = HTTPStatus.OK
+        response_descr = ""
+        disconnect_client = False
+        match msg.get(Keys.ACTION):
+            case Actions.PRESENCE:
+                username = msg[Keys.USER][Keys.ACCOUNT_NAME]
+                status = msg[Keys.USER].get(Keys.STATUS)
+                self.storage.change_user_status(username=username, status=status, is_active=True)
+            case Actions.MSG:
+                username = msg[Keys.FROM]
+                target_user = msg[Keys.TO]
+                self.storage.store_msg(user_from=username, user_to=target_user, msg=msg)
+            case Actions.CONTACTS:
+                username = msg[Keys.ACCOUNT_NAME]
+                contacts = self.storage.get_user_contacts(username=username)
+                response_code = HTTPStatus.ACCEPTED
+                response_descr = contacts
+            case Actions.ADD_CONTACT:
+                username = msg[Keys.ACCOUNT_NAME]
+                contact = msg[Keys.CONTACT]
+                ok = self.storage.add_contact(username=username, contact_name=contact)
+                if not ok:
+                    response_code = HTTPStatus.NOT_FOUND
+            case Actions.DEL_CONTACT:
+                username = msg[Keys.ACCOUNT_NAME]
+                contact = msg[Keys.CONTACT]
+                ok = self.storage.delete_contact(username=username, contact_name=contact)
+                if not ok:
+                    response_code = HTTPStatus.NOT_FOUND
+            case Actions.QUIT:
+                disconnect_client = True
+            case Actions.JOIN | Actions.LEAVE:
+                response_code = HTTPStatus.BAD_REQUEST
+            case _:
+                response_code = HTTPStatus.BAD_REQUEST
+        return response_code, response_descr, disconnect_client
 
     def _recv(self, client) -> dict | None:
         msg = None
@@ -200,7 +233,8 @@ class JIMServer(JIMBase, ContextDecorator):
         return msg
 
     def _make_response_msg(self, code: HTTPStatus, description: str | list = ""):
-        description = description or code.phrase
+        if not isinstance(description, list):
+            description = description or code.phrase
         msg = {
             Keys.RESPONSE: code.value,
             Keys.ERROR if 400 <= code.value < 600 else Keys.ALERT: description,

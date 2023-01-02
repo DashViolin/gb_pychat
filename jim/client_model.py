@@ -12,7 +12,7 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     username = Column(String, index=True, unique=True)
     status = Column(Text, nullable=True, default=None)
-    is_active = Column(Boolean, default=False, index=True)
+    is_active = Column(Boolean, default=True, index=True)
     is_contact = Column(Boolean, default=True, index=True)
 
 

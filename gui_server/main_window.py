@@ -12,7 +12,7 @@ from PyQt6 import QtCore, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(300, 215)
+        MainWindow.resize(300, 273)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.verticalLayout = QtWidgets.QVBoxLayout(self.centralwidget)
@@ -37,6 +37,12 @@ class Ui_MainWindow(object):
         self.pushButtonStartServer = QtWidgets.QPushButton(self.centralwidget)
         self.pushButtonStartServer.setObjectName("pushButtonStartServer")
         self.verticalLayout.addWidget(self.pushButtonStartServer)
+        self.pushButtonAddContact = QtWidgets.QPushButton(self.centralwidget)
+        self.pushButtonAddContact.setObjectName("pushButtonAddContact")
+        self.verticalLayout.addWidget(self.pushButtonAddContact)
+        self.pushButtonDeleteContact = QtWidgets.QPushButton(self.centralwidget)
+        self.pushButtonDeleteContact.setObjectName("pushButtonDeleteContact")
+        self.verticalLayout.addWidget(self.pushButtonDeleteContact)
         self.pushButtonClients = QtWidgets.QPushButton(self.centralwidget)
         self.pushButtonClients.setObjectName("pushButtonClients")
         self.verticalLayout.addWidget(self.pushButtonClients)
@@ -55,6 +61,8 @@ class Ui_MainWindow(object):
         self.labelIP.setText(_translate("MainWindow", "IP адрес"))
         self.labelPort.setText(_translate("MainWindow", "Порт"))
         self.pushButtonStartServer.setText(_translate("MainWindow", "Запуск сервера"))
+        self.pushButtonAddContact.setText(_translate("MainWindow", "Добавить пользователя"))
+        self.pushButtonDeleteContact.setText(_translate("MainWindow", "Удалить пользователя"))
         self.pushButtonClients.setText(_translate("MainWindow", "Просмотр списка клиентов"))
         self.pushButtonHistory.setText(_translate("MainWindow", "Просмотр истории клиентов"))
 

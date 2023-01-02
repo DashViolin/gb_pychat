@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>300</width>
-    <height>215</height>
+    <height>273</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -48,6 +48,20 @@
      <widget class="QPushButton" name="pushButtonStartServer">
       <property name="text">
        <string>Запуск сервера</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="pushButtonAddContact">
+      <property name="text">
+       <string>Добавить пользователя</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="pushButtonDeleteContact">
+      <property name="text">
+       <string>Удалить пользователя</string>
       </property>
      </widget>
     </item>

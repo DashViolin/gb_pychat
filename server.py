@@ -2,8 +2,8 @@ import argparse
 import sys
 
 from config import ServerConf
+from jim.decorators import log
 from jim.server import JIMServer
-from logger.decorator import log
 from logger.server_log_config import call_logger, main_logger
 
 
