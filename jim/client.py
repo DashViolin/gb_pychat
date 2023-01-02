@@ -20,6 +20,7 @@ from .schema import Actions, Keys
 class SignalNotifier(QtCore.QObject):
     new_message = QtCore.pyqtSignal(str)
     connection_lost = QtCore.pyqtSignal()
+    contacts_updated = QtCore.pyqtSignal()
 
     def __init__(self) -> None:
         super().__init__()
@@ -29,8 +30,9 @@ class JIMClient(JIMBase, ContextDecorator):
     port = PortDescriptor()
     socket_lock = Lock()
 
-    def __init__(self, ip: str, port: int, username: str, password: str) -> None:
+    def __init__(self, ip: str, port: int | str, username: str, password: str) -> None:
         super().__init__()
+        self.connected = False
         self.ip = ip_address(ip)
         self.port = port
         self.server_name = f"{self.ip}:{self.port}"
@@ -52,36 +54,26 @@ class JIMClient(JIMBase, ContextDecorator):
         main_logger.info("Закрываю соединение...")
         self.close()
 
-    def _connect(self, password):
+    def _connect(self):
         while True:
             try:
                 self.sock.connect((str(self.ip), self.port))
-                if self.authenticate():
-                    match response[Keys.RESPONSE]:  # type: ignore
-                        case HTTPStatus.OK:
-                            main_logger.info(f"Успешно подключен к серверу {self.server_name} от имени {self.username}")
-                            self.send_presence(status=self.status)
-                            return True
-                        case HTTPStatus.FORBIDDEN:
-                            main_logger.warning(f"Сервер {self.server_name} отказал в подключении.")
-                            raise KeyboardInterrupt
-                        case _:
-                            pass
+                self.connected = True
+                break
+            except ConnectionRefusedError as ex:
+                main_logger.info(f"Пытаюсь подключиться как {self.username} к серверу {self.server_name}...")
+                sleep(1)
             except (NonDictInputError, IncorrectDataRecivedError, ReqiuredFieldMissingError) as ex:
                 main_logger.info(
                     f"Не удалось подключиться от имени {self.username} к серверу {self.server_name} ({str(ex)})"
                 )
-                raise KeyboardInterrupt
-            except ConnectionRefusedError as ex:
-                main_logger.info(f"Пытаюсь подключиться как {self.username} к серверу {self.server_name}...")
-                sleep(1)
+                break
 
     def close(self):
         self.sock.close()
 
-    def run(self, password):
-        connected = self._connect(password)
-        if connected:
+    def run(self):
+        if self.connected:
             self.sync_contacts()
             receiver = Thread(target=self._start_reciever_loop)
             receiver.daemon = True
@@ -93,21 +85,26 @@ class JIMClient(JIMBase, ContextDecorator):
                 break
 
     def authenticate(self):
-        with self.socket_lock:
+        self._connect()
+        if self.connected:
             msg = self.msg_factory.make_authenticate_msg(password=self.password)
-            resp = self._send_data(msg)
-        if resp[Keys.RESPONSE] == HTTPStatus.OK:  # type: ignore
-            return True
-        return False
+            resp = self._send_data(msg, return_response=True)
+            if resp.get(Keys.RESPONSE) == HTTPStatus.OK:  # type: ignore
+                main_logger.info(f"Успешно подключен к серверу {self.server_name} от имени {self.username}")
+                self.send_presence(status=self.status)
+                return True, resp
+            return False, resp
+        return False, dict()
 
     def sync_contacts(self):
-        with self.socket_lock:
-            msg = self.msg_factory.make_get_contacts_msg()
-            resp = self._send_data(msg)
+        msg = self.msg_factory.make_get_contacts_msg()
+        resp = self._send_data(msg, return_response=True)
         if resp[Keys.RESPONSE] == HTTPStatus.ACCEPTED:  # type: ignore
-            contacts = msg[Keys.ALERT]
-            self.storage.update_contacts(contacts)  # type: ignore
             main_logger.debug(f"Принят ответ: {resp}")
+            contacts = resp.get(Keys.ALERT)  # type: ignore
+            if contacts:
+                self.storage.update_contacts(contacts)  # type: ignore
+                self.notifier.contacts_updated.emit()
         else:
             main_logger.warning(f"Принят ответ: {resp}")
 
@@ -123,8 +120,11 @@ class JIMClient(JIMBase, ContextDecorator):
 
     def add_contact(self, contact_name):
         msg = self.msg_factory.make_add_contact_msg(contact=contact_name)
-        self._send_data(msg)
-        self.storage.add_contact(contact=contact_name)
+        resp = self._send_data(msg, return_response=True)
+        if resp and resp.get(Keys.RESPONSE) == HTTPStatus.OK:
+            self.storage.add_contact(contact=contact_name)
+            return True
+        return False
 
     def delete_contact(self, contact_name):
         msg = self.msg_factory.make_del_contact_msg(contact=contact_name)
@@ -171,7 +171,7 @@ class JIMClient(JIMBase, ContextDecorator):
             main_logger.debug(f"Отправлено сообщение: {msg_data}")
             resp = self._recv()
         if not return_response:
-            if resp[Keys.RESPONSE] == HTTPStatus.OK:
+            if resp.get(Keys.RESPONSE) == HTTPStatus.OK:
                 main_logger.debug(f"Принят ответ: {resp}")
             else:
                 main_logger.warning(f"Что-то не так: {resp}")

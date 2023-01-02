@@ -8,6 +8,7 @@ from PyQt6 import QtGui, QtWidgets
 from config import ClientConf
 from gui_client.main_window import Ui_MainWindow
 from jim.client import JIMClient
+from jim.schema import Keys
 
 browser_msg_template = dedent(
     """
@@ -73,12 +74,16 @@ class Application:
 
     def _bind_client_signals(self):
         if self.client:
-            self.client.notifier.new_message.connect(self._on_accepted_new_message)
+            self.client.notifier.new_message.connect(self._on_accept_new_message)
             self.client.notifier.connection_lost.connect(self._on_connection_lost)
+            self.client.notifier.contacts_updated.connect(self._fill_contacts)
 
-    def show_standard_warning(self, info: str, title: str = "Ошибка", text: str = ""):
+    def show_standard_warning(self, info: str, title: str = "Ошибка", text: str = "", is_warning: bool = True):
         msg = QtWidgets.QMessageBox()
-        msg.setWindowIcon(self.app.style().standardIcon(QtWidgets.QStyle.StandardPixmap.SP_MessageBoxWarning))
+        if is_warning:
+            msg.setWindowIcon(self.app.style().standardIcon(QtWidgets.QStyle.StandardPixmap.SP_MessageBoxWarning))
+        else:
+            msg.setWindowIcon(self.app.style().standardIcon(QtWidgets.QStyle.StandardPixmap.SP_MessageBoxInformation))
         msg.setWindowTitle(title)
         msg.setText(text)
         msg.setInformativeText(info)
@@ -103,14 +108,21 @@ class Application:
                 "Пароль": password,
             }
             if all(conn_params.values()):
-                self.client = JIMClient(ip=ip, port=int(port), username=username, password=password)
-                self.client_task = Thread(target=self.client.run)
-                self.client_task.daemon = True
-                self.client_task.start()
-                self._bind_client_signals()
-                self._switch_controls(is_enabled=True)
-                self._fill_contacts()
-                self.ui.pushButtonConnect.setText(self._disconnect_btn_label)
+                self.client = JIMClient(ip=ip, port=port, username=username, password=password)
+                ok, resp = self.client.authenticate()
+                if ok:
+                    self._bind_client_signals()
+                    self._switch_controls(is_enabled=True)
+                    self.client_task = Thread(target=self.client.run)
+                    self.client_task.daemon = True
+                    self.client_task.start()
+                    self._fill_contacts()
+                    self.ui.pushButtonConnect.setText(self._disconnect_btn_label)
+                elif resp:
+                    message = resp.get(Keys.ALERT) or resp.get(Keys.ERROR)
+                    self.show_standard_warning(info=message)  # type: ignore
+                else:
+                    self.show_standard_warning(info="Не удалось подключиться к серверу")  # type: ignore
             else:
                 empty_params = [key for key, value in conn_params.items() if not value]
                 show_empty_params_message(empty_params)
@@ -156,45 +168,55 @@ class Application:
 
     def _on_contact_double_click(self):
         contact_item = self.ui.listWidgetContacts.currentItem()
-        originalBG = contact_item.background()
-        if self.prev_contact_item:
-            self.prev_contact_item.setBackground(originalBG)
-        contact_item.setBackground(QtGui.QColor("lightBlue"))
-        self.prev_contact_item = contact_item
         contact_name = contact_item.text()
         self._fill_chat(contact_name=contact_name)
 
     def _on_click_send(self):
-        contact = self.ui.listWidgetContacts.currentItem().text()
-        if self.client and contact:
-            msg_text = self.ui.textEditMessage.toPlainText()
-            if msg_text:
-                self.client.send_msg(contact=contact, msg_text=msg_text)
-                self._fill_chat(contact_name=contact)
-                self.ui.textEditMessage.clear()
+        try:
+            contact = self.ui.listWidgetContacts.currentItem().text()
+            if self.client and contact:
+                msg_text = self.ui.textEditMessage.toPlainText()
+                if msg_text:
+                    self.client.send_msg(contact=contact, msg_text=msg_text)
+                    self._fill_chat(contact_name=contact)
+                    self.ui.textEditMessage.clear()
+        except AttributeError:
+            self.show_standard_warning("Выберите контакт из списка")
 
     def _on_click_add_contact(self):
-        contact = self.show_add_contact_dialog()
+        contact = self._show_add_contact_dialog()
         if contact and self.client:
-            self.client.add_contact(contact_name=contact)
-            self._fill_contacts()
+            ok = self.client.add_contact(contact_name=contact)
+            if ok:
+                self._fill_contacts()
+            else:
+                self.show_standard_warning(info="Контакт не найден")
 
     def _on_click_delete_contact(self):
-        contact = self.ui.listWidgetContacts.currentItem().text()
-        if contact and self.client:
-            self.client.delete_contact(contact_name=contact)
-            self._fill_contacts()
+        try:
+            contact = self.ui.listWidgetContacts.currentItem().text()
+            if contact and self.client:
+                ok = self.client.delete_contact(contact_name=contact)
+                if ok:
+                    self._fill_contacts()
+                else:
+                    self.show_standard_warning(info="Контакт не найден")
+        except AttributeError:
+            self.show_standard_warning("Выберите контакт из списка")
 
-    def show_add_contact_dialog(self):
+    def _show_add_contact_dialog(self):
         contact, ok = QtWidgets.QInputDialog.getText(self.main_window, "Добавление пользователя", "Введите имя:")
         if ok:
             return contact
         return None
 
-    def _on_accepted_new_message(self, sender):
-        if sender == self.ui.listWidgetContacts.currentItem().text():
-            self._fill_chat(sender)
-        else:
+    def _on_accept_new_message(self, sender):
+        try:
+            if sender == self.ui.listWidgetContacts.currentItem().text():
+                self._fill_chat(sender)
+        except AttributeError:
+            pass
+        finally:
             self._fill_contacts()
 
     def _on_connection_lost(self):

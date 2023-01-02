@@ -31,7 +31,7 @@ class Application:
         sys.exit(self.app.exec())
 
     def _create_bindings(self):
-        self.add_user_dialog.accept_creds.connect(self.accept_cerds)
+        self.add_user_dialog.accept_creds.connect(self._accept_creds_slot)
         self.ui.pushButtonAddContact.clicked.connect(self._on_click_add_user)
         self.ui.pushButtonDeleteContact.clicked.connect(self._on_click_del_user)
         self.ui.pushButtonClients.clicked.connect(self._on_click_show_clients)
@@ -47,17 +47,19 @@ class Application:
     def _on_click_stop_server(self):
         if self.server_task:
             self.server_task.kill()
+            self.server_task = None
             self.ui.pushButtonStartServer.setText("Запустить сервер")
             self.ui.pushButtonStartServer.clicked.connect(self._on_click_start_server)
 
     def _start_server(self):
+        address = self.ui.lineEditIP.text().strip()
+        port = self.ui.lineEditPort.text().strip()
         if platform.system().lower() == "windows":
-            self.server_task = subprocess.Popen("poetry run python server.py", creationflags=subprocess.CREATE_NEW_CONSOLE)  # type: ignore
+            server_cmd = f"poetry run python -W ignore server.py -a {address} -p {port}"
+            self.server_task = subprocess.Popen("", creationflags=subprocess.CREATE_NEW_CONSOLE)  # type: ignore
         else:
-            address = self.ui.lineEditIP.text().strip()
-            port = self.ui.lineEditPort.text().strip()
             base_cmd = ["gnome-terminal", "--", "poetry", "run", "python"]
-            server_cmd = ["server.py", "-a", address, "-p", port]
+            server_cmd = ["-W", "ignore", "server.py", "-a", address, "-p", port]
             self.server_task = subprocess.Popen(base_cmd + server_cmd)
 
     def _on_click_show_history(self):
@@ -69,10 +71,13 @@ class Application:
     def _on_click_add_user(self):
         self.add_user_dialog.show()
 
-    def accept_cerds(self, username: str, password: str):
+    def _accept_creds_slot(self, username: str, password: str):
         if username and password:
             if not self.server_storage.check_user_exists(username=username):
-                self.server_storage.register_user(username=username, password=password)
+                self.server_storage.add_user(username=username, password=password)
+                self.show_standard_notification(
+                    title="Успешно", info=f'Пользователь "{username}" добавлен', is_warning=False
+                )
             else:
                 self.show_standard_notification(info="Пользовтель с таким именем уже существует")
         else:
