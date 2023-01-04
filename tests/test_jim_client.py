@@ -3,9 +3,9 @@ from copy import deepcopy
 from http import HTTPStatus
 from unittest import TestCase, mock
 
-from config import ClientConf
-from jim.client import JIMClient
-from jim.schema import Actions, Keys
+from client.config import ClientConf
+from client.transport import JIMClient
+from common.schema import Actions, Keys
 
 
 class TestJIMClient(TestCase):
