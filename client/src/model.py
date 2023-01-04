@@ -1,7 +1,7 @@
 from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text, create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-from client.config import ClientConf
+from .config import ClientConf
 
 Base = declarative_base()
 

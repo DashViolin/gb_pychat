@@ -3,8 +3,7 @@ from abc import abstractmethod
 from datetime import datetime
 from json import JSONDecodeError
 
-from common.config import CommonConf
-
+from .config import CommonConf
 from .errors import IncorrectDataRecivedError, NonDictInputError, ReqiuredFieldMissingError
 from .schema import JIMValidationSchema, Keys
 

@@ -5,14 +5,13 @@ from socket import AF_INET, SOCK_STREAM, socket
 from threading import Lock, Thread
 from time import sleep
 
-from PyQt6 import QtCore
-
-from client.logger_conf import main_logger
 from common.base import JIMBase
 from common.descriptors import PortDescriptor
 from common.errors import IncorrectDataRecivedError, NonDictInputError, ReqiuredFieldMissingError, ServerDisconnectError
 from common.schema import Actions, Keys
+from PyQt6 import QtCore
 
+from .logger_conf import main_logger
 from .messages import ClientMessages
 from .storage import ClientStorage
 

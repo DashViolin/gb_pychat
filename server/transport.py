@@ -5,12 +5,12 @@ from select import select
 from socket import AF_INET, SOCK_STREAM, socket
 from time import sleep
 
-from common.base import JIMBase
-from common.decorators import login_required
-from common.descriptors import PortDescriptor
-from common.errors import IncorrectDataRecivedError, NonDictInputError, ReqiuredFieldMissingError
-from common.meta import JIMMeta
-from common.schema import Actions, Keys
+from client.common.base import JIMBase
+from client.common.decorators import login_required
+from client.common.descriptors import PortDescriptor
+from client.common.errors import IncorrectDataRecivedError, NonDictInputError, ReqiuredFieldMissingError
+from client.common.meta import JIMMeta
+from client.common.schema import Actions, Keys
 from server.config import ServerConf
 from server.logger_conf import main_logger
 from server.storage import ServerStorage

@@ -1,4 +1,4 @@
-from client.application import Application
+from src.application import Application
 
 
 application = Application()

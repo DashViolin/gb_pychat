@@ -2,7 +2,7 @@ import argparse
 import sys
 import warnings
 
-from common.decorators import log
+from client.common.decorators import log
 from server.config import ServerConf
 from server.logger_conf import call_logger, main_logger
 from server.transport import JIMServer

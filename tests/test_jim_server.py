@@ -3,8 +3,8 @@ from copy import deepcopy
 from http import HTTPStatus
 from unittest import TestCase, mock
 
-from common.errors import IncorrectDataRecivedError, NonDictInputError, ReqiuredFieldMissingError
-from common.schema import Actions, Keys
+from client.common.errors import IncorrectDataRecivedError, NonDictInputError, ReqiuredFieldMissingError
+from client.common.schema import Actions, Keys
 from server.transport import JIMServer
 
 

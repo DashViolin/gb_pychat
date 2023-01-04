@@ -3,7 +3,7 @@ import hashlib
 
 from sqlalchemy.exc import NoResultFound
 
-from common.config import CommonConf
+from server.config import ServerConf
 from server.model import Contact, History, Session, User
 
 
@@ -42,10 +42,10 @@ class ServerStorage:
             return True
 
     def make_passwd_hash(self, username: str, password: str):
-        b_salt = username.encode(CommonConf.ENCODING)
-        b_password = password.encode(CommonConf.ENCODING)
+        b_salt = username.encode(ServerConf.ENCODING)
+        b_password = password.encode(ServerConf.ENCODING)
         pswd_hash = hashlib.pbkdf2_hmac("sha256", password=b_password, salt=b_salt, iterations=10000)
-        return binascii.hexlify(pswd_hash).decode(CommonConf.ENCODING)
+        return binascii.hexlify(pswd_hash).decode(ServerConf.ENCODING)
 
     def get_user_password_hash(self, username: str):
         try:

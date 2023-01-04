@@ -2,13 +2,13 @@ import sys
 from textwrap import dedent
 from threading import Thread
 
+from common.schema import Keys
 from jinja2 import Template
 from PyQt6 import QtWidgets
 
-from client.config import ClientConf
-from client.gui.main_window import Ui_MainWindow
-from client.transport import JIMClient
-from common.schema import Keys
+from .config import ClientConf
+from .gui.main_window import Ui_MainWindow
+from .transport import JIMClient
 
 
 def get_html_message_template() -> Template:
