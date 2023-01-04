@@ -9,8 +9,12 @@ from .errors import IncorrectDataRecivedError, NonDictInputError, ReqiuredFieldM
 from .schema import JIMValidationSchema, Keys
 
 
-# class JIMBase(metaclass=JIMMeta):
 class JIMBase:
+    """
+    Базовый класс для классов сервера и клиента транспортных модулей,
+    содержит общий функционал валидации и сериализации сообщений
+    """
+
     def __init__(self) -> None:
         self.encoding = CommonConf.ENCODING
         self.package_length = CommonConf.MAX_PACKAGE_LENGTH

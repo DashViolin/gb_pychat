@@ -7,6 +7,10 @@ Base = declarative_base()
 
 
 class Contact(Base):
+    """
+    Таблица временного хранения контактов пользователя
+    """
+
     __tablename__ = "user"
 
     id = Column(Integer, primary_key=True)
@@ -14,6 +18,10 @@ class Contact(Base):
 
 
 class Message(Base):
+    """
+    Таблица хранения сообщений в чатах пользователя
+    """
+
     __tablename__ = "message"
 
     id = Column(Integer, primary_key=True)
@@ -25,6 +33,7 @@ class Message(Base):
 
 
 def init_db(username: str):
+    """Функция инициализации сессии ORM и базы данных при её отсутствии"""
     db_path = ClientConf.DATA_DIR / f"jim_client_db_{username}.sqlite"
     conn_string = f"sqlite:///{db_path}?check_same_thread=false&uri=true"
 

@@ -7,6 +7,10 @@ from client.model import Contact, Message, init_db
 
 
 class ClientStorage:
+    """
+    Класс-обертка над ORM для взаимодействия клиента с базой данных
+    """
+
     def __init__(self, username) -> None:
         session, db_path = init_db(username)
         self.session = session

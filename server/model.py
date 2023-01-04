@@ -11,6 +11,10 @@ Base = declarative_base()
 
 
 class Contact(Base):
+    """
+    Таблица контактов, связывающая таблицу пользователей в отношении "многие ко многим"
+    """
+
     __tablename__ = "contact"
 
     id = Column(Integer, primary_key=True)
@@ -20,23 +24,15 @@ class Contact(Base):
 
     __table_args__ = (UniqueConstraint(user_id, contact_id),)
 
-    messages = relationship("Message", backref="contact")
-
-    user = relationship("User", backref=backref("user", uselist=False), foreign_keys=[user_id])
-    contact = relationship("User", backref=backref("contact", uselist=False), foreign_keys=[contact_id])
-
-
-class Message(Base):
-    __tablename__ = "message"
-
-    id = Column(Integer, primary_key=True)
-    contact_id = Column(Integer, ForeignKey("contact.id", onupdate="CASCADE", ondelete="CASCADE"), nullable=False)
-    text = Column(Text)
-    timestamp = Column(DateTime, default=func.now())
-    is_delivered = Column(Boolean, default=False, index=True)
+    user = relationship("User", backref=backref("user", uselist=False), foreign_keys=[user_id], viewonly=True)
+    contact = relationship("User", backref=backref("contact", uselist=False), foreign_keys=[contact_id], viewonly=True)
 
 
 class User(Base):
+    """
+    Таблица для хранения зарегистрированных на сервере пользователей
+    """
+
     __tablename__ = "user"
 
     id = Column(Integer, primary_key=True)
@@ -53,6 +49,10 @@ class User(Base):
 
 
 class History(Base):
+    """
+    Таблица с историей входов пользователей на сервер
+    """
+
     __tablename__ = "history"
 
     id = Column(Integer, primary_key=True)

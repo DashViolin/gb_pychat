@@ -1,12 +1,12 @@
 import dis
 
 
-# Подумалось, что реализовать проверки в одном метаклассе в данном случае будет лаконичнее.
-# Кстати, декораторы с логированием "экранируют" вызовы функций внутри метода,
-# модуль dis выдает только код самого декоратора.
-# Поэтому отловить "запрещенные функции" в декорированном методе не представляется возможным,
-# пришлось снять декораторы.
 class JIMMeta(type):
+    """
+    Метакласс служит для проверки корректности инициализации сокетов на предмет допустимых вызовов
+    в классах сервера и клиента транспортных модулей
+    """
+
     def __init__(self, clsname, bases, clsdict):
         method_calls = set()
         attrs = set()
@@ -18,7 +18,7 @@ class JIMMeta(type):
                         method_calls.add(instr.argval)
                     elif instr.opname == "LOAD_GLOBAL":
                         attrs.add(instr.argval)
-            except TypeError:
+            except (SyntaxError, TypeError):  # dis.get_instructions() for docstring causes SyntaxError
                 pass
 
         if "server" in clsname.lower() or "client" in clsname.lower():

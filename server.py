@@ -1,5 +1,6 @@
 import argparse
 import sys
+import warnings
 
 from common.decorators import log
 from server.config import ServerConf
@@ -40,8 +41,10 @@ if __name__ == "__main__":
     main_logger.info("Приложение запущено.")
     try:
         ip, port = parse_args()
-        with JIMServer(ip, port) as jim_server:
-            jim_server.start_server()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            with JIMServer(ip, port) as jim_server:
+                jim_server.start_server()
     except KeyboardInterrupt:
         main_logger.info("Работа сервера была принудительно завершена.")
         sys.exit(0)

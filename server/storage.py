@@ -8,6 +8,10 @@ from server.model import Contact, History, Session, User
 
 
 class ServerStorage:
+    """
+    Класс-обертка над ORM для взаимодействия сервера с базой данных
+    """
+
     def __init__(self) -> None:
         self.session = Session()
         self.set_all_users_inactive()

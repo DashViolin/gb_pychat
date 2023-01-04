@@ -5,6 +5,11 @@ from socket import socket
 
 
 def log(logger):
+    """
+    Декоратор записывает в файл лога вызовов информацию при каждом вызове декорированной функции:
+    имя, аргументы, откуда вызвана и название модуля
+    """
+
     def decorator(fnc):
         @wraps(fnc)
         def wrapper(*args, **kwargs):
@@ -22,6 +27,8 @@ def log(logger):
 
 
 def login_required(fnc):
+    """Декоратор проверяет, залогинен ли пользователь на сервере"""
+
     @wraps(fnc)
     def check(*args, **kwargs):
         server = args[0]

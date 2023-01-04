@@ -20,6 +20,10 @@ socket_lock = Lock()
 
 
 class SignalNotifier(QtCore.QObject):
+    """
+    Класс-генератор сигналов PyQt для взаимодействия с графическим интерфейсом
+    """
+
     new_message = QtCore.pyqtSignal(str)
     connection_lost = QtCore.pyqtSignal()
     contacts_updated = QtCore.pyqtSignal()
@@ -28,12 +32,15 @@ class SignalNotifier(QtCore.QObject):
         super().__init__()
 
 
-class JIMClient(Thread, QtCore.QObject, JIMBase, ContextDecorator):
+class JIMClient(Thread, JIMBase, ContextDecorator):
+    """
+    Класс ядра клиента, отвечает за прием и передачу сообщений, а также взаимодействие с базой данных
+    """
+
     port = PortDescriptor()
 
     def __init__(self, ip: str, port: int | str, username: str, password: str) -> None:
         Thread.__init__(self)
-        QtCore.QObject.__init__(self)
         JIMBase.__init__(self)
         self.connected = False
         self.ip = ip_address(ip)
@@ -75,19 +82,8 @@ class JIMClient(Thread, QtCore.QObject, JIMBase, ContextDecorator):
         main_logger.info("Закрываю соединение...")
         self.sock.close()
 
-    def run(self):
-        if self.connected:
-            self.sync_contacts()
-            receiver = Thread(target=self._start_reciever_loop)
-            receiver.daemon = True
-            receiver.start()
-            while True:
-                sleep(1)
-                if receiver.is_alive():
-                    continue
-                break
-
     def authenticate(self):
+        """Запускает подключение и аутентификацию клиента на сервере"""
         self._connect()
         if self.connected:
             msg = self.msg_factory.make_authenticate_msg(password=self.password)
@@ -98,6 +94,19 @@ class JIMClient(Thread, QtCore.QObject, JIMBase, ContextDecorator):
                 return True, resp
             return False, resp
         return False, dict()
+
+    def run(self):
+        """Запускает синхронизацию контактов и фоновый поток обработки сообщений после подключения и аутентификации"""
+        if self.connected:
+            self.sync_contacts()
+            receiver = Thread(target=self._start_reciever_loop)
+            receiver.daemon = True
+            receiver.start()
+            while True:
+                sleep(1)
+                if receiver.is_alive():
+                    continue
+                break
 
     def sync_contacts(self):
         msg = self.msg_factory.make_get_contacts_msg()

@@ -1,4 +1,6 @@
 class PortDescriptor:
+    """Дескриптор управляет установкой порта сервера: приводит тип порта к числу и проверяет допустимый диапазон значений"""
+
     def __get__(self, instance, instance_type):
         return instance.__dict__[self.name]
 

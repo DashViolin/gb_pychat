@@ -12,6 +12,10 @@ from server.storage import ServerStorage
 
 
 class Application:
+    """
+    Класс, задающий поведение главного окна графического интерфейса сервера
+    """
+
     def __init__(self) -> None:
         self.app = QtWidgets.QApplication(sys.argv)
         self.main_window = QtWidgets.QMainWindow()
@@ -27,6 +31,7 @@ class Application:
         self.server_task = None
 
     def run(self):
+        """Запускает отображение интерфейса"""
         self.main_window.show()
         sys.exit(self.app.exec())
 
@@ -76,13 +81,13 @@ class Application:
         if username and password:
             if not self.server_storage.check_user_exists(username=username):
                 self.server_storage.add_user(username=username, password=password)
-                self.show_standard_notification(
+                self._show_standard_notification(
                     title="Успешно", info=f'Пользователь "{username}" добавлен', is_warning=False
                 )
             else:
-                self.show_standard_notification(info="Пользовтель с таким именем уже существует")
+                self._show_standard_notification(info="Пользовтель с таким именем уже существует")
         else:
-            self.show_standard_notification(info='Поля "имя пользователя" и "пароль" не должны быть пустыми')
+            self._show_standard_notification(info='Поля "имя пользователя" и "пароль" не должны быть пустыми')
 
     def _on_click_del_user(self):
         username, ok = QtWidgets.QInputDialog.getText(self.main_window, "Удаление пользователя", "Введите имя:")
@@ -90,15 +95,15 @@ class Application:
             if self.server_storage.check_user_exists(username=username):
                 res = self.server_storage.remove_user(username=username)
                 if res:
-                    self.show_standard_notification(
+                    self._show_standard_notification(
                         title="Успешно", info=f'Пользователь "{username}" удален', is_warning=False
                     )
                 else:
-                    self.show_standard_notification(info="Ошибка удаления пользователя")
+                    self._show_standard_notification(info="Ошибка удаления пользователя")
             else:
-                self.show_standard_notification(info="Пользователь с таким именем отсутсвует")
+                self._show_standard_notification(info="Пользователь с таким именем отсутсвует")
 
-    def show_standard_notification(self, info: str, title: str = "Ошибка", is_warning: bool = True):
+    def _show_standard_notification(self, info: str, title: str = "Ошибка", is_warning: bool = True):
         msg = QtWidgets.QMessageBox()
         if is_warning:
             msg.setWindowIcon(self.app.style().standardIcon(QtWidgets.QStyle.StandardPixmap.SP_MessageBoxWarning))
@@ -111,6 +116,10 @@ class Application:
 
 
 class HistoryWindow:
+    """
+    Класс окна просмотра истории входов клиентов
+    """
+
     def __init__(self) -> None:
         self.server_storage = ServerStorage()
         self.window = QtWidgets.QWidget()
@@ -143,6 +152,10 @@ class HistoryWindow:
 
 
 class ClientsWindow:
+    """
+    Класс окна просмотра активных клиентов
+    """
+
     def __init__(self) -> None:
         self.server_storage = ServerStorage()
         self.window = QtWidgets.QWidget()
@@ -168,6 +181,10 @@ class ClientsWindow:
 
 
 class AddUserDialog(QtWidgets.QDialog):
+    """
+    Класс диалога добавления пользователя
+    """
+
     accept_creds = QtCore.pyqtSignal(str, str)
 
     def __init__(self, parent=None):

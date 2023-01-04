@@ -4,6 +4,10 @@ from common.schema import Actions, Keys
 
 
 class ClientMessages:
+    """
+    Класс для генерации валидных сообщений клиента по протоколу JIM
+    """
+
     def __init__(self, username: str, encoding: str) -> None:
         self.username = username
         self.encoding = encoding

@@ -10,8 +10,12 @@ from client.gui.main_window import Ui_MainWindow
 from client.transport import JIMClient
 from common.schema import Keys
 
-browser_msg_template = dedent(
-    """
+
+def get_html_message_template() -> Template:
+    """Возвращает шаблон HTML-разметки для рендеринга окна чата"""
+    return Template(
+        dedent(
+            """
     <style>
         div.user {
             text-align: right;
@@ -37,10 +41,15 @@ browser_msg_template = dedent(
             </p>
         </div>
     {% endfor %}"""
-)
+        )
+    )
 
 
 class Application:
+    """
+    Класс, задающий поведение графического интерфейса клиента
+    """
+
     def __init__(self) -> None:
         self.app = QtWidgets.QApplication(sys.argv)
         self.main_window = QtWidgets.QMainWindow()
@@ -53,11 +62,12 @@ class Application:
         self.client: JIMClient | None = None
         self.current_chat = None
         self.prev_contact_item: QtWidgets.QListWidgetItem | None = None
-        self.chat_tamplate = Template(browser_msg_template)
+        self.chat_tamplate = get_html_message_template()
         self._create_bindings()
         self._set_defaults()
 
     def run(self):
+        """Запускает отображение интерфейса"""
         self.main_window.show()
         sys.exit(self.app.exec())
 
@@ -89,7 +99,7 @@ class Application:
             self.client.notifier.connection_lost.connect(self._on_connection_lost)
             self.client.notifier.contacts_updated.connect(self._fill_contacts)
 
-    def show_standard_warning(self, info: str, title: str = "Ошибка", text: str = "", is_warning: bool = True):
+    def _show_standard_warning(self, info: str, title: str = "Ошибка", text: str = "", is_warning: bool = True):
         msg = QtWidgets.QMessageBox()
         msg.resize(100, 50)
         if is_warning:
@@ -106,7 +116,7 @@ class Application:
         def show_empty_params_message(empty_params):
             text = "Ошибка подключения к серверу."
             info = f"Не указаны параметры: {', '.join(empty_params)}"
-            self.show_standard_warning(info=info, text=text)
+            self._show_standard_warning(info=info, text=text)
 
         if self.ui.pushButtonConnect.text() == self._connect_btn_label:
             ip = self.ui.lineEditIP.text()
@@ -132,9 +142,9 @@ class Application:
                     self.ui.pushButtonConnect.setText(self._disconnect_btn_label)
                 elif resp:
                     message = resp.get(Keys.ALERT) or resp.get(Keys.ERROR)
-                    self.show_standard_warning(info=message)  # type: ignore
+                    self._show_standard_warning(info=message)  # type: ignore
                 else:
-                    self.show_standard_warning(info="Не удалось подключиться к серверу")  # type: ignore
+                    self._show_standard_warning(info="Не удалось подключиться к серверу")  # type: ignore
             else:
                 empty_params = [key for key, value in conn_params.items() if not value]
                 show_empty_params_message(empty_params)
@@ -211,19 +221,19 @@ class Application:
                     self.ui.textEditMessage.clear()
             self._fill_chat(contact_name=contact)
         except AttributeError:
-            self.show_standard_warning("Выберите контакт из списка")
+            self._show_standard_warning("Выберите контакт из списка")
 
     def _on_click_add_contact(self):
         contact = self._show_add_contact_dialog()
         if self.client and contact:
             if contact == self.client.username:
-                self.show_standard_warning(info="Нельзя добавлять себя в контакты")
+                self._show_standard_warning(info="Нельзя добавлять себя в контакты")
                 return
             ok = self.client.add_contact(contact_name=contact)
             if ok:
                 self._fill_contacts()
             else:
-                self.show_standard_warning(info="Контакт не найден")
+                self._show_standard_warning(info="Контакт не найден")
 
     def _on_click_delete_contact(self):
         try:
@@ -235,9 +245,9 @@ class Application:
                     if self.current_chat == contact:
                         self.ui.textBrowserChat.clear()
                 else:
-                    self.show_standard_warning(info="Контакт не найден")
+                    self._show_standard_warning(info="Контакт не найден")
         except AttributeError:
-            self.show_standard_warning("Выберите контакт из списка")
+            self._show_standard_warning("Выберите контакт из списка")
 
     def _show_add_contact_dialog(self):
         contact, ok = QtWidgets.QInputDialog.getText(self.main_window, "Добавление пользователя", "Введите имя:")
@@ -255,7 +265,7 @@ class Application:
             self._fill_contacts()
 
     def _on_connection_lost(self):
-        self.show_standard_warning(info="Потеряно соединение с сервером.")
+        self._show_standard_warning(info="Потеряно соединение с сервером.")
 
         self._set_defaults()
         if self.client:

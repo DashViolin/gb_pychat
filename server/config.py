@@ -2,6 +2,10 @@ from common.config import CommonConf
 
 
 class ServerConf(CommonConf):
+    """
+    Настройки сервера по умолчанию
+    """
+
     DB_CONFIG = {
         "TEST_URL": "sqlite:///:memory:",
         "URL": "sqlite:///data/jim_server_db.sqlite",

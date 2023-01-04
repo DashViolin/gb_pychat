@@ -9,13 +9,18 @@ from common.base import JIMBase
 from common.decorators import login_required
 from common.descriptors import PortDescriptor
 from common.errors import IncorrectDataRecivedError, NonDictInputError, ReqiuredFieldMissingError
+from common.meta import JIMMeta
 from common.schema import Actions, Keys
 from server.config import ServerConf
 from server.logger_conf import main_logger
 from server.storage import ServerStorage
 
 
-class JIMServer(JIMBase, ContextDecorator):
+class JIMServer(JIMBase, ContextDecorator, metaclass=JIMMeta):
+    """
+    Класс ядра сервера, отвечает за роутинг сообщений и взаимодействие с клиентами и базой данных
+    """
+
     port = PortDescriptor()
 
     def __init__(self, ip: str, port: int) -> None:
@@ -45,6 +50,7 @@ class JIMServer(JIMBase, ContextDecorator):
         main_logger.info(f"Сервер запущен на {self.ip}:{self.port}.")
 
     def start_server(self):
+        """Запускает сервер на прослушивание порта и обработку сообщений"""
         while True:
             try:
                 self._listen()
