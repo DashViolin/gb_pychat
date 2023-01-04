@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from .schema import Actions, Keys
+from common.schema import Actions, Keys
 
 
 class ClientMessages:

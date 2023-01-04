@@ -4,11 +4,11 @@ import sys
 
 from PyQt6 import QtCore, QtWidgets
 
-from config import ServerConf
-from gui_server.clients_window import Ui_ClientsWindow
-from gui_server.history_window import Ui_HistoryWindow
-from gui_server.main_window import Ui_MainWindow
-from jim.server_storage import ServerStorage
+from server.config import ServerConf
+from server.gui.clients_window import Ui_ClientsWindow
+from server.gui.history_window import Ui_HistoryWindow
+from server.gui.main_window import Ui_MainWindow
+from server.storage import ServerStorage
 
 
 class Application:
@@ -69,6 +69,7 @@ class Application:
         self.clients_window.show()
 
     def _on_click_add_user(self):
+        self.add_user_dialog.clear_data()
         self.add_user_dialog.show()
 
     def _accept_creds_slot(self, username: str, password: str):
@@ -203,3 +204,8 @@ class AddUserDialog(QtWidgets.QDialog):
                 self.close()
         else:
             QtWidgets.QMessageBox.warning(self, "Ошибка", "Пароли не совпадают")
+
+    def clear_data(self):
+        self.usernameLineEdit.clear()
+        self.passwd1LineEdit.clear()
+        self.passwd2LineEdit.clear()

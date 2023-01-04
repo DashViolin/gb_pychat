@@ -7,14 +7,16 @@ from time import sleep
 
 from PyQt6 import QtCore
 
-from logger.client_log_config import main_logger
+from client.logger_conf import main_logger
+from common.base import JIMBase
+from common.descriptors import PortDescriptor
+from common.errors import IncorrectDataRecivedError, NonDictInputError, ReqiuredFieldMissingError, ServerDisconnectError
+from common.schema import Actions, Keys
 
-from .base import JIMBase
-from .client_messages import ClientMessages
-from .client_storage import ClientStorage
-from .descriptors import PortDescriptor
-from .errors import IncorrectDataRecivedError, NonDictInputError, ReqiuredFieldMissingError, ServerDisconnectError
-from .schema import Actions, Keys
+from .messages import ClientMessages
+from .storage import ClientStorage
+
+socket_lock = Lock()
 
 
 class SignalNotifier(QtCore.QObject):
@@ -26,12 +28,13 @@ class SignalNotifier(QtCore.QObject):
         super().__init__()
 
 
-class JIMClient(JIMBase, ContextDecorator):
+class JIMClient(Thread, QtCore.QObject, JIMBase, ContextDecorator):
     port = PortDescriptor()
-    socket_lock = Lock()
 
     def __init__(self, ip: str, port: int | str, username: str, password: str) -> None:
-        super().__init__()
+        Thread.__init__(self)
+        QtCore.QObject.__init__(self)
+        JIMBase.__init__(self)
         self.connected = False
         self.ip = ip_address(ip)
         self.port = port
@@ -42,7 +45,7 @@ class JIMClient(JIMBase, ContextDecorator):
         self.msg_factory = ClientMessages(self.username, self.encoding)
         self.storage = ClientStorage(self.username)
         self.notifier = SignalNotifier()
-        self.status = self.storage.get_user_status(self.username)
+        self.status = ""
 
     def __str__(self):
         return f"JIM_client_object"
@@ -51,7 +54,6 @@ class JIMClient(JIMBase, ContextDecorator):
         return self
 
     def __exit__(self, *exc):
-        main_logger.info("Закрываю соединение...")
         self.close()
 
     def _connect(self):
@@ -70,6 +72,7 @@ class JIMClient(JIMBase, ContextDecorator):
                 break
 
     def close(self):
+        main_logger.info("Закрываю соединение...")
         self.sock.close()
 
     def run(self):
@@ -100,23 +103,34 @@ class JIMClient(JIMBase, ContextDecorator):
         msg = self.msg_factory.make_get_contacts_msg()
         resp = self._send_data(msg, return_response=True)
         if resp[Keys.RESPONSE] == HTTPStatus.ACCEPTED:  # type: ignore
-            main_logger.debug(f"Принят ответ: {resp}")
             contacts = resp.get(Keys.ALERT)  # type: ignore
-            if contacts:
-                self.storage.update_contacts(contacts)  # type: ignore
-                self.notifier.contacts_updated.emit()
-        else:
-            main_logger.warning(f"Принят ответ: {resp}")
+            self.storage.update_contacts(contacts)  # type: ignore
+            self.notifier.contacts_updated.emit()
 
     def send_presence(self, status: str):
         msg = self.msg_factory.make_presence_msg(status=status)
         self._send_data(msg)
 
-    def send_msg(self, contact: str, msg_text: str):
+    def send_msg(self, contact: str, msg_text: str, store_msg: bool = True):
         msg = self.msg_factory.make_msg(user_or_room=contact, message=msg_text)
         timestamp = self._from_iso_to_datetime(msg[Keys.TIME])
-        self._send_data(msg)
-        self.storage.store_msg(user_from=self.username, user_to=contact, msg_text=msg_text, timestamp=timestamp)
+        resp = self._send_data(msg, return_response=True)
+        is_delivered = False
+        if resp and resp.get(Keys.RESPONSE) == HTTPStatus.OK:
+            is_delivered = True
+        if store_msg:
+            self.storage.store_msg(
+                contact=contact, msg_text=msg_text, timestamp=timestamp, is_incoming=False, is_delivered=is_delivered
+            )
+        return is_delivered
+
+    def resend_not_delivered(self, contact: str):
+        messages = self.storage.get_not_delivered_msgs(contact=contact)
+        for msg_id, msg_text in messages:
+            is_delivered = self.send_msg(contact=contact, msg_text=msg_text, store_msg=False)
+            if is_delivered:
+                self.storage.mark_msg_delivered(msg_id=msg_id)
+            sleep(0.1)
 
     def add_contact(self, contact_name):
         msg = self.msg_factory.make_add_contact_msg(contact=contact_name)
@@ -128,35 +142,46 @@ class JIMClient(JIMBase, ContextDecorator):
 
     def delete_contact(self, contact_name):
         msg = self.msg_factory.make_del_contact_msg(contact=contact_name)
-        self._send_data(msg)
-        self.storage.del_contact(contact=contact_name)
-
-    def set_user_status(self, status: str):
-        self.storage.set_user_status(username=self.username, status=status)
+        resp = self._send_data(msg, return_response=True)
+        if resp and resp.get(Keys.RESPONSE) == HTTPStatus.OK:
+            self.storage.del_contact(contact=contact_name)
+            return True
+        return False
 
     def _start_reciever_loop(self):
         while True:
-            try:
-                msg = self._recv()
+            sleep(1)
+            with socket_lock:
+                self.sock.settimeout(0.5)
                 try:
-                    self._validate_msg(msg)
-                except (NonDictInputError, IncorrectDataRecivedError, ReqiuredFieldMissingError) as ex:
-                    main_logger.error(f"Принято некорректное сообщение: {msg} ({ex})")
-                else:
-                    main_logger.info(f"Принято сообщение: {msg}")
-                    self._process_incoming_msg(msg)
-            except (OSError, ServerDisconnectError):
-                main_logger.info("Соединение разорвано.")
-                self.notifier.connection_lost.emit()
-                break
+                    msg = self._recv()
+                    try:
+                        self._validate_msg(msg)
+                    except (NonDictInputError, IncorrectDataRecivedError, ReqiuredFieldMissingError) as ex:
+                        main_logger.error(f"Принято некорректное сообщение: {msg} ({ex})")
+                    else:
+                        main_logger.info(f"Принято сообщение: {msg}")
+                        self._process_server_msg(msg)
+                except (ConnectionError, ConnectionAbortedError, ConnectionResetError, ServerDisconnectError):
+                    main_logger.info("Потеряно соединение с сервером.")
+                    self.notifier.connection_lost.emit()
+                    break
+                except OSError as ex:
+                    if ex.errno:
+                        main_logger.info("Потеряно соединение с сервером.")
+                        self.notifier.connection_lost.emit()
+                        break
+                finally:
+                    self.sock.settimeout(5)
 
-    def _process_incoming_msg(self, msg):
+    def _process_server_msg(self, msg):
         if msg.get(Keys.ACTION) == Actions.MSG:
             user_from = msg[Keys.FROM]
-            user_to = msg[Keys.TO]
+            if not self.storage.check_contact(contact=user_from):
+                self.storage.add_contact(contact=user_from)
             text = msg[Keys.MSG]
             timestamp = self._from_iso_to_datetime(msg[Keys.TIME])
-            self.storage.store_msg(user_from=user_from, user_to=user_to, msg_text=text, timestamp=timestamp)
+            self.storage.store_msg(contact=user_from, msg_text=text, is_incoming=True, timestamp=timestamp)
             self.notifier.new_message.emit(user_from)
             main_logger.debug(f"Получено сообщение: {msg}")
         elif msg.get(Keys.ACTION) == Actions.PROBE:
@@ -166,28 +191,17 @@ class JIMClient(JIMBase, ContextDecorator):
             main_logger.error(f"Сообщение не распознано: {msg}")
 
     def _send_data(self, msg_data: dict, return_response: bool = False):
-        with self.socket_lock:
-            self._send(msg_data)
-            main_logger.debug(f"Отправлено сообщение: {msg_data}")
+        with socket_lock:
+            msg_raw_data = self._dump_msg(msg_data)
+            self.sock.send(msg_raw_data)
             resp = self._recv()
-        if not return_response:
-            if resp.get(Keys.RESPONSE) == HTTPStatus.OK:
-                main_logger.debug(f"Принят ответ: {resp}")
-            else:
-                main_logger.warning(f"Что-то не так: {resp}")
-        else:
+        main_logger.debug(f"Отправлено сообщение: {msg_data}")
+        main_logger.debug(f"Принят ответ: {resp}")
+        if return_response:
             return resp
-
-    def _send(self, msg: dict):
-        msg_raw_data = self._dump_msg(msg)
-        self.sock.send(msg_raw_data)
 
     def _recv(self) -> dict:
         raw_resp_data = self.sock.recv(self.package_length)
         if not raw_resp_data:
             raise ServerDisconnectError()
         return self._load_msg(raw_resp_data)
-
-    def _update_status(self, new_status: str):
-        self.storage.set_user_status(username=self.username, status=new_status)
-        self.status = self.storage.get_user_status(username=self.username)

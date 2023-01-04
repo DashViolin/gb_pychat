@@ -168,6 +168,19 @@
    </layout>
   </widget>
  </widget>
+ <tabstops>
+  <tabstop>lineEditUsername</tabstop>
+  <tabstop>lineEditPasswd</tabstop>
+  <tabstop>pushButtonConnect</tabstop>
+  <tabstop>listWidgetContacts</tabstop>
+  <tabstop>textEditMessage</tabstop>
+  <tabstop>pushButtonSend</tabstop>
+  <tabstop>pushButtonAddContact</tabstop>
+  <tabstop>pushButtonDeleteContact</tabstop>
+  <tabstop>textBrowserChat</tabstop>
+  <tabstop>lineEditIP</tabstop>
+  <tabstop>lineEditPort</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

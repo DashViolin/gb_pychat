@@ -1,5 +1,7 @@
 import inspect
 from functools import wraps
+from http import HTTPStatus
+from socket import socket
 
 
 def log(logger):
@@ -22,6 +24,11 @@ def log(logger):
 def login_required(fnc):
     @wraps(fnc)
     def check(*args, **kwargs):
+        server = args[0]
+        for arg in args[1:]:
+            if isinstance(arg, socket):
+                if arg not in server.active_clients.values():
+                    return HTTPStatus.FORBIDDEN, "", True
         return fnc(*args, **kwargs)
 
     return check

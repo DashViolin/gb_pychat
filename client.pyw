@@ -1,4 +1,4 @@
-from gui_client.application import Application
+from client.application import Application
 
 
 application = Application()

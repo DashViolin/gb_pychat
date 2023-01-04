@@ -1,12 +1,10 @@
 import binascii
 import hashlib
-import json
 
 from sqlalchemy.exc import NoResultFound
 
-from config import CommonConf
-
-from .server_model import Contact, History, Message, Session, User
+from common.config import CommonConf
+from server.model import Contact, History, Session, User
 
 
 class ServerStorage:
@@ -21,7 +19,7 @@ class ServerStorage:
         except NoResultFound:
             return False
 
-    def user_auth(self, username: str, password: str):
+    def check_user_auth(self, username: str, password: str):
         if self.check_user_exists:
             password = self.make_passwd_hash(username=username, password=password)
             db_password = self.get_user_password_hash(username=username)
@@ -52,14 +50,10 @@ class ServerStorage:
         except NoResultFound:
             return None
 
-    def register_user_login(self, username, status=None, ip_address=None):
-        user = self.session.query(User).filter_by(username=username).one()
-        if ip_address:
-            user.history.append(History(ip_address=ip_address))
-        if status:
-            user.status = status
-            self.session.add(user)
-            self.session.commit()
+    def register_user_login(self, username, ip_address):
+        history = History(username=username, ip_address=ip_address)
+        self.session.add(history)
+        self.session.commit()
 
     def add_user(self, username, password):
         password = self.make_passwd_hash(username=username, password=password)
@@ -81,47 +75,11 @@ class ServerStorage:
 
     def get_users_history(self):
         query = self.session.query(History).all()
-        return [(entry.user.username, entry.ip_address, entry.login_timestamp) for entry in query]
+        return [(entry.username, entry.ip_address, entry.login_timestamp) for entry in query]
 
     def set_all_users_inactive(self):
         for user in self.get_active_users():
             self.change_user_status(user, is_active=False)
-
-    def store_msg(self, user_from, user_to, msg: dict):
-        user_from_query, user_to_query = self.register_contacts(user_from, user_to)
-        contact_pair = (
-            self.session.query(Contact).filter_by(user_id=user_from_query.id, contact_id=user_to_query.id).one()
-        )
-        msg_text = json.dumps(msg, ensure_ascii=False)
-        contact_pair.messages.append(Message(text=msg_text))
-        self.session.add(contact_pair)
-        self.session.commit()
-
-    def register_contacts(self, username, contact_name):
-        user_from_query = self.session.query(User).filter_by(username=username).one()
-        user_to_query = self.session.query(User).filter_by(username=contact_name).one()
-        user_from_query.contacts.append(user_to_query)
-        self.session.add(user_from_query)
-        self.session.commit()
-        return user_from_query, user_to_query
-
-    def get_user_messages(self, user_to):
-        try:
-            reciever = self.session.query(User).filter_by(username=user_to).one()
-            contact_pairs = self.session.query(Contact).filter_by(contact_id=reciever.id).all()
-        except NoResultFound:
-            return []
-        else:
-            for pair in contact_pairs:
-                try:
-                    messages = self.session.query(Message).filter_by(contact_id=pair.id, is_delivered=False).all()
-                    yield from ((entry.id, json.loads(entry.text)) for entry in messages)
-                except NoResultFound:
-                    continue
-
-    def mark_msg_is_delivered(self, msg_id: int):
-        self.session.query(Message).filter_by(id=msg_id).update({"is_delivered": True})
-        self.session.commit()
 
     def get_user_contacts(self, username: str):
         try:

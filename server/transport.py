@@ -5,15 +5,14 @@ from select import select
 from socket import AF_INET, SOCK_STREAM, socket
 from time import sleep
 
-import config
-from logger.server_log_config import main_logger
-
-from .base import JIMBase
-from .decorators import login_required
-from .descriptors import PortDescriptor
-from .errors import IncorrectDataRecivedError, NonDictInputError, ReqiuredFieldMissingError
-from .schema import Actions, Keys
-from .server_storage import ServerStorage
+from common.base import JIMBase
+from common.decorators import login_required
+from common.descriptors import PortDescriptor
+from common.errors import IncorrectDataRecivedError, NonDictInputError, ReqiuredFieldMissingError
+from common.schema import Actions, Keys
+from server.config import ServerConf
+from server.logger_conf import main_logger
+from server.storage import ServerStorage
 
 
 class JIMServer(JIMBase, ContextDecorator):
@@ -42,7 +41,7 @@ class JIMServer(JIMBase, ContextDecorator):
         self.sock.bind((str(self.ip), self.port))
         self.sock.setblocking(False)
         self.sock.settimeout(0.2)
-        self.sock.listen(config.ServerConf.MAX_CONNECTIONS)
+        self.sock.listen(ServerConf.MAX_CONNECTIONS)
         main_logger.info(f"Сервер запущен на {self.ip}:{self.port}.")
 
     def start_server(self):
@@ -74,21 +73,6 @@ class JIMServer(JIMBase, ContextDecorator):
                 for client in r_clients:
                     self._accept_message(client)
                 self._cleanup_disconnected_users()
-                self._process_messages()
-
-    def _process_messages(self):
-        active_users = self.storage.get_active_users()
-        for user in active_users:
-            client_conn = self.active_clients[user]
-            for msg_id, msg in self.storage.get_user_messages(user_to=user):
-                try:
-                    self._send(msg=msg, client=client_conn)
-                    sleep(0.01)
-                except (OSError, ConnectionRefusedError, ConnectionResetError, BrokenPipeError):
-                    self._disconnect_client(conn=client_conn, user=user)
-                    break
-                else:
-                    self.storage.mark_msg_is_delivered(msg_id)
 
     def _cleanup_disconnected_users(self):
         disconnected_users = []
@@ -127,11 +111,9 @@ class JIMServer(JIMBase, ContextDecorator):
                 self._validate_msg(msg)
                 main_logger.debug(f"Принято сообщение: {msg}")
                 if msg.get(Keys.ACTION) == Actions.AUTH:
-                    response_code, response_descr, disconnect_client = self._register_user(
-                        client_conn=client_conn, msg=msg
-                    )
+                    response_code, response_descr, disconnect_client = self._register_user(msg, client_conn)
                 else:
-                    response_code, response_descr, disconnect_client = self._route_msg(msg=msg)
+                    response_code, response_descr, disconnect_client = self._route_msg(msg, client_conn)
             except (NonDictInputError, IncorrectDataRecivedError) as ex:
                 response_code = HTTPStatus.INTERNAL_SERVER_ERROR
                 response_descr = str(ex)
@@ -151,23 +133,21 @@ class JIMServer(JIMBase, ContextDecorator):
                 if disconnect_client:
                     self._disconnect_client(client_conn)
 
-    def _register_user(self, client_conn: socket, msg: dict):
-        response_code = HTTPStatus.OK
-        response_descr = ""
-        disconnect_client = False
+    def _register_user(self, msg: dict, client_conn: socket):
         username = msg[Keys.USER][Keys.ACCOUNT_NAME]
-
-        if username not in self.active_clients:
+        if username in self.active_clients:
+            response_code = HTTPStatus.FORBIDDEN
+            response_descr = "Клиент с таким именем уже зарегистрирован на сервере"
+            disconnect_client = True
+        else:
             passwd = msg[Keys.USER].get(Keys.PASSWORD)
             ip = client_conn.getpeername()[0]
-            if self.storage.user_auth(username=username, password=passwd):
-                if username not in self.active_clients:
-                    self.active_clients[username] = client_conn
-                    self.storage.register_user_login(username=username, ip_address=ip)
-                else:
-                    response_code = HTTPStatus.FORBIDDEN
-                    response_descr = "Клиент с таким именем уже зарегистрирован на сервере"
-                    disconnect_client = True
+            if self.storage.check_user_auth(username=username, password=passwd):
+                self.active_clients[username] = client_conn
+                self.storage.register_user_login(username=username, ip_address=ip)
+                response_code = HTTPStatus.OK
+                response_descr = ""
+                disconnect_client = False
             else:
                 response_code = HTTPStatus.FORBIDDEN
                 response_descr = "Неверное имя пользователя или пароль"
@@ -175,7 +155,7 @@ class JIMServer(JIMBase, ContextDecorator):
         return response_code, response_descr, disconnect_client
 
     @login_required
-    def _route_msg(self, msg: dict):
+    def _route_msg(self, msg: dict, client_conn: socket):
         response_code = HTTPStatus.OK
         response_descr = ""
         disconnect_client = False
@@ -187,7 +167,14 @@ class JIMServer(JIMBase, ContextDecorator):
             case Actions.MSG:
                 username = msg[Keys.FROM]
                 target_user = msg[Keys.TO]
-                self.storage.store_msg(user_from=username, user_to=target_user, msg=msg)
+                self.storage.add_contact(username=target_user, contact_name=username)
+                if target_user in self.active_clients:
+                    client_conn = self.active_clients[target_user]
+                    self._send(msg=msg, client=client_conn)
+                    main_logger.debug(f"Отправлено сообщение: {msg}")
+                else:
+                    response_code = HTTPStatus.NOT_FOUND
+                    response_descr = "Пользователь не активен"
             case Actions.CONTACTS:
                 username = msg[Keys.ACCOUNT_NAME]
                 contacts = self.storage.get_user_contacts(username=username)
@@ -224,6 +211,7 @@ class JIMServer(JIMBase, ContextDecorator):
             return msg
 
     def _send(self, msg, client):
+
         msg_raw_data = self._dump_msg(msg)
         client.send(msg_raw_data)
 

@@ -1,4 +1,4 @@
-# Form implementation generated from reading ui file './gui_client/client_gui.ui'
+# Form implementation generated from reading ui file './client/gui/client_gui.ui'
 #
 # Created by: PyQt6 UI code generator 6.4.0
 #
@@ -102,6 +102,16 @@ class Ui_MainWindow(object):
 
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
+        MainWindow.setTabOrder(self.lineEditUsername, self.lineEditPasswd)
+        MainWindow.setTabOrder(self.lineEditPasswd, self.pushButtonConnect)
+        MainWindow.setTabOrder(self.pushButtonConnect, self.listWidgetContacts)
+        MainWindow.setTabOrder(self.listWidgetContacts, self.textEditMessage)
+        MainWindow.setTabOrder(self.textEditMessage, self.pushButtonSend)
+        MainWindow.setTabOrder(self.pushButtonSend, self.pushButtonAddContact)
+        MainWindow.setTabOrder(self.pushButtonAddContact, self.pushButtonDeleteContact)
+        MainWindow.setTabOrder(self.pushButtonDeleteContact, self.textBrowserChat)
+        MainWindow.setTabOrder(self.textBrowserChat, self.lineEditIP)
+        MainWindow.setTabOrder(self.lineEditIP, self.lineEditPort)
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate

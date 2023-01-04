@@ -3,12 +3,12 @@ from textwrap import dedent
 from threading import Thread
 
 from jinja2 import Template
-from PyQt6 import QtGui, QtWidgets
+from PyQt6 import QtWidgets
 
-from config import ClientConf
-from gui_client.main_window import Ui_MainWindow
-from jim.client import JIMClient
-from jim.schema import Keys
+from client.config import ClientConf
+from client.gui.main_window import Ui_MainWindow
+from client.transport import JIMClient
+from common.schema import Keys
 
 browser_msg_template = dedent(
     """
@@ -18,9 +18,19 @@ browser_msg_template = dedent(
         }
     </style>
     {% for message in messages %}
-        <div class="{% if message.sender==current_user %}user{% else %}contact{% endif %}">
+        <div class="{% if message.is_incoming %}contact{% else %}user{% endif %}">
             <p>
-                <u><b>{{ message.sender }}</b>(<i> {{ message.time }}</i>)</u>
+                <u>
+                    {% if message.is_incoming %}
+                        <b>{{ contact }}</b>
+                    {% else %}
+                        <b>{{ current_user }}</b>
+                    {% endif %}
+                    (<i>{{ message.time }}</i>)
+                    {% if not message.is_delivered %}
+                        <b>[Не доставлено]</b>
+                    {% endif %}
+                </u>
                 <br/>
                 {{ message.text }}
                 <br/>
@@ -41,6 +51,7 @@ class Application:
         self._disconnect_btn_label = "Отключиться"
 
         self.client: JIMClient | None = None
+        self.current_chat = None
         self.prev_contact_item: QtWidgets.QListWidgetItem | None = None
         self.chat_tamplate = Template(browser_msg_template)
         self._create_bindings()
@@ -80,6 +91,7 @@ class Application:
 
     def show_standard_warning(self, info: str, title: str = "Ошибка", text: str = "", is_warning: bool = True):
         msg = QtWidgets.QMessageBox()
+        msg.resize(100, 50)
         if is_warning:
             msg.setWindowIcon(self.app.style().standardIcon(QtWidgets.QStyle.StandardPixmap.SP_MessageBoxWarning))
         else:
@@ -132,36 +144,52 @@ class Application:
             self._set_defaults()
 
     def _fill_contacts(self):
+        current_contact_name = None
+        current_contact = None
+        try:
+            current_contact_name = self.ui.listWidgetContacts.currentItem().text()
+        except AttributeError:
+            pass
         self.ui.listWidgetContacts.clear()
         if self.client:
             contacts = self.client.storage.get_contact_list()
-            for contact, is_active in contacts:
+            for contact in contacts:
                 item = QtWidgets.QListWidgetItem()
                 item.setText(contact)
-                if is_active:
-                    item.setForeground(QtGui.QColor("gray"))
                 self.ui.listWidgetContacts.addItem(item)
+                if contact == current_contact_name:
+                    current_contact = item
+        if current_contact:
+            self.ui.listWidgetContacts.setCurrentItem(current_contact)
 
     def _fill_chat(self, contact_name):
         self.ui.textBrowserChat.setText(f"Пока пусто...")
         if self.client:
             messages = [
-                {"sender": sender, "text": text, "time": timestamp.replace(microsecond=0).isoformat().replace("T", " ")}
-                for text, sender, timestamp in self.client.storage.get_chat_messages(
-                    user=self.client.username, contact=contact_name
+                {
+                    "text": text,
+                    "is_incoming": is_incoming,
+                    "is_delivered": is_delivered,
+                    "time": timestamp.replace(microsecond=0).isoformat().replace("T", " "),
+                }
+                for text, is_incoming, is_delivered, timestamp in self.client.storage.get_chat_messages(
+                    contact=contact_name
                 )
             ]
             if messages:
-                chat_text = self._make_chat_text(messages=messages, current_user=self.client.username)
+                chat_text = self._make_chat_text(
+                    messages=messages, current_user=self.client.username, contact=contact_name
+                )
                 self.ui.textBrowserChat.setText(chat_text)
                 self.ui.textBrowserChat.verticalScrollBar().setValue(
                     self.ui.textBrowserChat.verticalScrollBar().maximum()
                 )
 
-    def _make_chat_text(self, messages: list[dict], current_user: str):
+    def _make_chat_text(self, messages: list[dict], current_user: str, contact: str):
         data = {
             "messages": messages,
             "current_user": current_user,
+            "contact": contact,
         }
         text = self.chat_tamplate.render(**data)
         return text
@@ -169,23 +197,28 @@ class Application:
     def _on_contact_double_click(self):
         contact_item = self.ui.listWidgetContacts.currentItem()
         contact_name = contact_item.text()
+        self.current_chat = contact_name
         self._fill_chat(contact_name=contact_name)
 
     def _on_click_send(self):
         try:
             contact = self.ui.listWidgetContacts.currentItem().text()
             if self.client and contact:
+                self.client.resend_not_delivered(contact=contact)
                 msg_text = self.ui.textEditMessage.toPlainText()
                 if msg_text:
                     self.client.send_msg(contact=contact, msg_text=msg_text)
-                    self._fill_chat(contact_name=contact)
                     self.ui.textEditMessage.clear()
+            self._fill_chat(contact_name=contact)
         except AttributeError:
             self.show_standard_warning("Выберите контакт из списка")
 
     def _on_click_add_contact(self):
         contact = self._show_add_contact_dialog()
-        if contact and self.client:
+        if self.client and contact:
+            if contact == self.client.username:
+                self.show_standard_warning(info="Нельзя добавлять себя в контакты")
+                return
             ok = self.client.add_contact(contact_name=contact)
             if ok:
                 self._fill_contacts()
@@ -199,6 +232,8 @@ class Application:
                 ok = self.client.delete_contact(contact_name=contact)
                 if ok:
                     self._fill_contacts()
+                    if self.current_chat == contact:
+                        self.ui.textBrowserChat.clear()
                 else:
                     self.show_standard_warning(info="Контакт не найден")
         except AttributeError:

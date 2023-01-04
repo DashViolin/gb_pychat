@@ -1,10 +1,10 @@
 import argparse
 import sys
 
-from config import ClientConf
-from jim.client import JIMClient
-from jim.decorators import log
-from logger.client_log_config import call_logger, main_logger
+from client.config import ClientConf
+from client.logger_conf import call_logger, main_logger
+from client.transport import JIMClient
+from common.decorators import log
 
 
 @log(call_logger)

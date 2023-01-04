@@ -1,7 +1,7 @@
 import logging
 from logging.handlers import RotatingFileHandler, TimedRotatingFileHandler
 
-from config import ServerConf
+from server.config import ServerConf
 
 main_logger = logging.getLogger("server.main")
 main_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(module)s - %(message)s")

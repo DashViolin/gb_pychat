@@ -2,7 +2,7 @@ from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, T
 from sqlalchemy.orm import backref, declarative_base, relationship, sessionmaker
 from sqlalchemy.sql import func
 
-from config import ServerConf
+from server.config import ServerConf
 
 db_path = ServerConf.DB_CONFIG["URL"]
 
@@ -56,8 +56,7 @@ class History(Base):
     __tablename__ = "history"
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("user.id", onupdate="CASCADE", ondelete="CASCADE"), nullable=False)
-    user = relationship("User", backref="history")
+    username = Column(String, nullable=False)
     ip_address = Column(String, nullable=False)
     login_timestamp = Column(DateTime, default=func.now())
 
