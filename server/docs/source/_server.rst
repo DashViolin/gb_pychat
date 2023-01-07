@@ -8,14 +8,14 @@
 Запускаемый модуль графического интерфейса управления сервером.
 
 Использование:
-``poetry run python server.pyw``
+``poetry run python run_server_gui.pyw``
 
 .. image:: _static/server.png
    :width: 300
    :alt: Общий вид главного окна сервера
 
 
-Скрипт "server.py"
+Скрипт "run_server_cli.py"
 ------------------
 
 Запускаемый модуль ядра сервера без графического интерфейса, содержит парсер аргументов командной строки и функционал инициализации приложения.
@@ -32,14 +32,14 @@
 
 Примеры использования:
 
-``poetry run python server.py``
+``poetry run python run_server_cli.py``
 
 *Запуск сервера с настройками по умолчанию на* ``127.0.0.1:7777``
 
-``poetry run python server.py -p 8080``
+``poetry run python run_server_cli.py -p 8080``
 
 *Запуск сервера на порту 8080*
 
-``poetry run python server.py -a localhost``
+``poetry run python run_server_cli.py -a localhost``
 
 *Запуск сервера принимающего только соединения с localhost*
