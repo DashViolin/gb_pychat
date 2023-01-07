@@ -17,10 +17,7 @@
    :caption: Содержание:
    
    _client
-   _server
-   _launcher
    _client pkg
-   _server_pkg
    _common
 
 

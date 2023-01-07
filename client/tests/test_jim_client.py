@@ -5,7 +5,7 @@
 
 # from client.src.config import ClientConf
 # from client.src.transport import JIMClient
-# from client.common.schema import Actions, Keys
+# from common.schema import Actions, Keys
 
 
 # class TestJIMClient(TestCase):

@@ -2,7 +2,7 @@ import argparse
 import sys
 import warnings
 
-from client.common.decorators import log
+from common.decorators import log
 from server.config import ServerConf
 from server.logger_conf import call_logger, main_logger
 from server.transport import JIMServer
@@ -37,7 +37,7 @@ def parse_args():
     return args.address, args.port
 
 
-if __name__ == "__main__":
+def run():
     main_logger.info("Приложение запущено.")
     try:
         ip, port = parse_args()
@@ -51,3 +51,7 @@ if __name__ == "__main__":
     except Exception as ex:
         main_logger.critical(str(ex))
         sys.exit(1)
+
+
+if __name__ == "__main__":
+    run()
