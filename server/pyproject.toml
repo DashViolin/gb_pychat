@@ -13,7 +13,8 @@ python = "^3.10"
 SQLAlchemy = "^1.4.44"
 PyQt6 = "^6.4.0"
 alembic = "^1.8.1"
-gb-pychat-common = { path = "../common" }
+gb-pychat-common = "^0.1.0"
+# gb-pychat-common = { path = "../common" }
 
 [tool.poetry.dev-dependencies]
 cx-Freeze = "^6.13.1"
