@@ -1,7 +1,10 @@
+import sqlite3
+
 from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text, create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.sql import default_comparator
 
-from .config import ClientConf
+from client.config import ClientConf
 
 Base = declarative_base()
 

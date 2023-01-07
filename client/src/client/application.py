@@ -6,9 +6,9 @@ from common.schema import Keys
 from jinja2 import Template
 from PyQt6 import QtWidgets
 
-from .config import ClientConf
-from .gui.main_window import Ui_MainWindow
-from .transport import JIMClient
+from client.config import ClientConf
+from client.gui.main_window import Ui_MainWindow
+from client.transport import JIMClient
 
 
 def get_html_message_template() -> Template:
@@ -20,21 +20,29 @@ def get_html_message_template() -> Template:
         div.user {
             text-align: right;
         }
+        span.user {
+            color: olive;
+        }
+        span.contact {
+            color: teal;
+        }
     </style>
     {% for message in messages %}
         <div class="{% if message.is_incoming %}contact{% else %}user{% endif %}">
             <p>
-                <u>
-                    {% if message.is_incoming %}
-                        <b>{{ contact }}</b>
-                    {% else %}
-                        <b>{{ current_user }}</b>
-                    {% endif %}
-                    (<i>{{ message.time }}</i>)
-                    {% if not message.is_delivered %}
-                        <b>[Не доставлено]</b>
-                    {% endif %}
-                </u>
+                <span class="{% if message.is_incoming %}contact{% else %}user{% endif %}">
+                    <u>
+                        {% if message.is_incoming %}
+                            <b>{{ contact }}</b>
+                        {% else %}
+                            <b>{{ current_user }}</b>
+                        {% endif %}
+                        (<i>{{ message.time }}</i>)
+                        {% if not message.is_delivered %}
+                            <b>[Не доставлено]</b>
+                        {% endif %}
+                    </u>
+                </span>
                 <br/>
                 {{ message.text }}
                 <br/>

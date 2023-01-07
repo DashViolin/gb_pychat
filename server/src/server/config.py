@@ -11,12 +11,13 @@ class ServerConf(CommonConf):
 
     ROOT_DIR = pathlib.Path().resolve()
     LOGS_DIR = ROOT_DIR / "logs"
-    DATA_DIR = ROOT_DIR / "data"
+    DATA_DIR_NAME = "data"
+    DATA_DIR = ROOT_DIR / DATA_DIR_NAME
     DB_NAME = "jim_server_db.sqlite"
     DB_PATH = DATA_DIR / DB_NAME
     DB_CONFIG = {
         "TEST_URL": "sqlite:///:memory:",
-        "URL": f"sqlite:///data/{DB_NAME}",
+        "URL": f"sqlite:///{DB_PATH}",
         "USER": "",
         "PSWD": "",
     }

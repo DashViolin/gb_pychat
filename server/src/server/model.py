@@ -1,12 +1,12 @@
+import sqlite3
+
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, create_engine
 from sqlalchemy.orm import backref, declarative_base, relationship, sessionmaker
 from sqlalchemy.sql import func
+from sqlalchemy.sql import default_comparator
 
 from server.config import ServerConf
 
-db_path = ServerConf.DB_CONFIG["URL"]
-
-engine = create_engine(db_path, future=True, echo=False, pool_recycle=7200)
 Base = declarative_base()
 
 
@@ -61,8 +61,12 @@ class History(Base):
     login_timestamp = Column(DateTime, default=func.now())
 
 
-Session = sessionmaker(bind=engine)
-
-
-if __name__ == "__main__":
-    Base.metadata.create_all(engine)
+def init_db():
+    """Функция инициализации сессии ORM и базы данных при её отсутствии"""
+    conn_str = ServerConf.DB_CONFIG["URL"]
+    engine = create_engine(conn_str, future=True, echo=False, pool_recycle=7200)
+    if not ServerConf.DB_PATH.exists():
+        Base.metadata.create_all(engine)
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    return session    

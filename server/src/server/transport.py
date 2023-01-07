@@ -23,7 +23,7 @@ class JIMServer(JIMBase, ContextDecorator, metaclass=JIMMeta):
 
     port = PortDescriptor()
 
-    def __init__(self, ip: str, port: int) -> None:
+    def __init__(self, ip: str, port: int | str) -> None:
         super().__init__()
         self.ip = ip_address(ip)
         self.port = port
@@ -31,6 +31,7 @@ class JIMServer(JIMBase, ContextDecorator, metaclass=JIMMeta):
         self.connections = []
         self.active_clients = dict()
         self.storage = ServerStorage()
+        self.is_running = False
 
     def __str__(self):
         return "JIM_server_object"
@@ -48,6 +49,7 @@ class JIMServer(JIMBase, ContextDecorator, metaclass=JIMMeta):
         self.sock.settimeout(0.2)
         self.sock.listen(ServerConf.MAX_CONNECTIONS)
         main_logger.info(f"Сервер запущен на {self.ip}:{self.port}.")
+        self.is_running = True
 
     def start_server(self):
         """Запускает сервер на прослушивание порта и обработку сообщений"""
@@ -62,6 +64,8 @@ class JIMServer(JIMBase, ContextDecorator, metaclass=JIMMeta):
 
     def _mainloop(self):
         while True:
+            if not self.is_running:
+                break
             try:
                 conn, addr = self.sock.accept()
             except OSError:
@@ -106,6 +110,9 @@ class JIMServer(JIMBase, ContextDecorator, metaclass=JIMMeta):
 
     def close(self):
         self.sock.close()
+        self.connections = []
+        self.active_clients = dict()
+        self.is_running = False
 
     def _accept_message(self, client_conn: socket):
         response_code = HTTPStatus.OK

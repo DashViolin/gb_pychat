@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy import and_
 from sqlalchemy.exc import NoResultFound
 
-from .model import Contact, Message, init_db
+from client.model import Contact, Message, init_db
 
 
 class ClientStorage:

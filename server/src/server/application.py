@@ -1,6 +1,8 @@
+import pathlib
 import platform
-import subprocess
 import sys
+from threading import Thread
+from subprocess import Popen
 
 from PyQt6 import QtCore, QtWidgets
 
@@ -9,6 +11,7 @@ from server.gui.clients_window import Ui_ClientsWindow
 from server.gui.history_window import Ui_HistoryWindow
 from server.gui.main_window import Ui_MainWindow
 from server.storage import ServerStorage
+from server.transport import JIMServer
 
 
 class Application:
@@ -33,7 +36,9 @@ class Application:
     def run(self):
         """Запускает отображение интерфейса"""
         self.main_window.show()
-        sys.exit(self.app.exec())
+        ret_code = self.app.exec()
+        self._on_click_stop_server()
+        sys.exit(ret_code)
 
     def _create_bindings(self):
         self.add_user_dialog.accept_creds.connect(self._accept_creds_slot)
@@ -52,6 +57,7 @@ class Application:
     def _on_click_stop_server(self):
         if self.server_task:
             self.server_task.kill()
+            self.server_task.terminate()
             self.server_task = None
             self.ui.pushButtonStartServer.setText("Запустить сервер")
             self.ui.pushButtonStartServer.clicked.connect(self._on_click_start_server)
@@ -59,13 +65,18 @@ class Application:
     def _start_server(self):
         address = self.ui.lineEditIP.text().strip()
         port = self.ui.lineEditPort.text().strip()
-        if platform.system().lower() == "windows":
-            server_cmd = f"poetry run python -W ignore server.py -a {address} -p {port}"
-            self.server_task = subprocess.Popen("", creationflags=subprocess.CREATE_NEW_CONSOLE)  # type: ignore
+        bin_path = pathlib.Path().resolve() / 'run_server_cli'
+        if not bin_path.exists():
+            server_path = pathlib.Path().resolve() / 'src/server/run_server_cli.py'
+            if not server_path.exists():
+                server_path = pathlib.Path().resolve() / 'run_server_cli.py'
+            server_cmd = f'python {server_path} -a {address} -p {port}'
         else:
-            base_cmd = ["gnome-terminal", "--", "poetry", "run", "python"]
-            server_cmd = ["-W", "ignore", "server.py", "-a", address, "-p", port]
-            self.server_task = subprocess.Popen(base_cmd + server_cmd)
+            server_cmd = f'{bin_path} -a {address} -p {port}'
+        if platform.system().lower() == "windows":
+            self.server_task = Popen(server_cmd, creationflags=subprocess.CREATE_NEW_CONSOLE)  # type: ignore
+        else:
+            self.server_task = Popen(server_cmd, executable='/bin/bash', shell=True)
 
     def _on_click_show_history(self):
         self.history_window.show()

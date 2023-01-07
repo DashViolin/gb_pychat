@@ -11,9 +11,9 @@ from common.errors import IncorrectDataRecivedError, NonDictInputError, Reqiured
 from common.schema import Actions, Keys
 from PyQt6 import QtCore
 
-from .logger_conf import main_logger
-from .messages import ClientMessages
-from .storage import ClientStorage
+from client.logger_conf import main_logger
+from client.messages import ClientMessages
+from client.storage import ClientStorage
 
 socket_lock = Lock()
 
@@ -65,6 +65,8 @@ class JIMClient(Thread, JIMBase, ContextDecorator):
     def _connect(self):
         while True:
             try:
+                if not self.sock:
+                    self.sock = socket(AF_INET, SOCK_STREAM)
                 self.sock.connect((str(self.ip), self.port))
                 self.connected = True
                 break
@@ -102,6 +104,8 @@ class JIMClient(Thread, JIMBase, ContextDecorator):
             receiver.daemon = True
             receiver.start()
             while True:
+                if not self.connected:
+                    break
                 sleep(1)
                 if receiver.is_alive():
                     continue
@@ -158,6 +162,8 @@ class JIMClient(Thread, JIMBase, ContextDecorator):
 
     def _start_reciever_loop(self):
         while True:
+            if not self.connected:
+                break
             sleep(1)
             with socket_lock:
                 self.sock.settimeout(0.5)
@@ -173,11 +179,13 @@ class JIMClient(Thread, JIMBase, ContextDecorator):
                 except (ConnectionError, ConnectionAbortedError, ConnectionResetError, ServerDisconnectError):
                     main_logger.info("Потеряно соединение с сервером.")
                     self.notifier.connection_lost.emit()
+                    self.connected = False
                     break
                 except OSError as ex:
                     if ex.errno:
                         main_logger.info("Потеряно соединение с сервером.")
                         self.notifier.connection_lost.emit()
+                        self.connected = False
                         break
                 finally:
                     self.sock.settimeout(5)

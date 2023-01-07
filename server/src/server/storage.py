@@ -4,7 +4,7 @@ import hashlib
 from sqlalchemy.exc import NoResultFound
 
 from server.config import ServerConf
-from server.model import Contact, History, Session, User
+from server.model import Contact, History, User, init_db
 
 
 class ServerStorage:
@@ -13,7 +13,7 @@ class ServerStorage:
     """
 
     def __init__(self) -> None:
-        self.session = Session()
+        self.session = init_db()
         self.set_all_users_inactive()
 
     def check_user_exists(self, username: str):
