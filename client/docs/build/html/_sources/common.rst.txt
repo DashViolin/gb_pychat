@@ -1,0 +1,61 @@
+Common package
+=================================================
+
+Пакет общих утилит, использующихся в разных модулях проекта.
+
+Скрипт base.py
+---------------
+
+.. automodule:: common.base
+	:members:
+
+
+Скрипт config.py
+----------------
+
+Содержит общие глобальные настройки проекта.
+
+   
+Скрипт errors.py
+----------------
+   
+.. automodule:: common.errors
+   :members:
+
+
+Скрипт decorators.py
+--------------------
+
+.. automodule:: common.decorators
+	:members:
+
+
+Скрипт descriptors.py
+---------------------
+
+.. autoclass:: common.descriptors.PortDescriptor
+   :members:
+   
+Скрипт schema.py
+----------------
+
+common.schema. **Keys**
+
+	Ключи JSON-сообщений протокола JIM
+
+
+common.schema. **Actions**
+
+	Значения поля ``Action`` JSON-сообщений протокола JIM
+
+
+common.schema. **JIMValidationSchema**
+
+   Словари для валидации сообщений протокола JIM
+
+
+Скрипт meta.py (не используется)
+--------------------------------
+
+.. autoclass:: common.meta.JIMMeta
+   :members:
