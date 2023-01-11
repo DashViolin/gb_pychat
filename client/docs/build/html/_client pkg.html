@@ -1,0 +1,222 @@
+
+<!DOCTYPE html>
+
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>Пакет «client» &#8212; документация jim 0.1</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx_highlight.js"></script>
+    <script src="_static/translations.js"></script>
+    <link rel="index" title="Алфавитный указатель" href="genindex.html" />
+    <link rel="search" title="Поиск" href="search.html" />
+    <link rel="next" title="Пакет «Common»" href="_common.html" />
+    <link rel="prev" title="Запуск клиента" href="_client.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="client">
+<h1>Пакет «client»<a class="headerlink" href="#client" title="Permalink to this heading">¶</a></h1>
+<p>Содержит функциональные клиентские модули мессенджера.</p>
+<p>Они отвечают за передачу и хранение сообщений в локальной базе данных, а также реализуют графический интерфейс клиента.</p>
+<section id="module-client.application">
+<span id="application-py"></span><h2>Модуль application.py<a class="headerlink" href="#module-client.application" title="Permalink to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="client.application.Application">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">client.application.</span></span><span class="sig-name descname"><span class="pre">Application</span></span><a class="headerlink" href="#client.application.Application" title="Ссылка на это определение">¶</a></dt>
+<dd><p>Класс, задающий поведение графического интерфейса клиента</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="client.application.Application.run">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#client.application.Application.run" title="Ссылка на это определение">¶</a></dt>
+<dd><p>Запускает отображение интерфейса</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="client.application.get_html_message_template">
+<span class="sig-prename descclassname"><span class="pre">client.application.</span></span><span class="sig-name descname"><span class="pre">get_html_message_template</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Template</span></span></span><a class="headerlink" href="#client.application.get_html_message_template" title="Ссылка на это определение">¶</a></dt>
+<dd><p>Возвращает шаблон HTML-разметки для рендеринга окна чата</p>
+</dd></dl>
+
+</section>
+<section id="module-client.config">
+<span id="config-py"></span><h2>Модуль config.py<a class="headerlink" href="#module-client.config" title="Permalink to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="client.config.ClientConf">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">client.config.</span></span><span class="sig-name descname"><span class="pre">ClientConf</span></span><a class="headerlink" href="#client.config.ClientConf" title="Ссылка на это определение">¶</a></dt>
+<dd><p>Настройки клиента по умолчанию</p>
+</dd></dl>
+
+</section>
+<section id="logger-conf-py">
+<h2>Модуль logger_conf.py<a class="headerlink" href="#logger-conf-py" title="Permalink to this heading">¶</a></h2>
+<p>Содержит настройки логгеров проекта (основного и логгера вызовов)</p>
+</section>
+<section id="module-client.messages">
+<span id="messages-py"></span><h2>Модуль messages.py<a class="headerlink" href="#module-client.messages" title="Permalink to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="client.messages.ClientMessages">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">client.messages.</span></span><span class="sig-name descname"><span class="pre">ClientMessages</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">username</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">encoding</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#client.messages.ClientMessages" title="Ссылка на это определение">¶</a></dt>
+<dd><p>Класс для генерации валидных сообщений клиента по протоколу JIM</p>
+</dd></dl>
+
+</section>
+<section id="module-client.model">
+<span id="model-py"></span><h2>Модуль model.py<a class="headerlink" href="#module-client.model" title="Permalink to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="client.model.Contact">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">client.model.</span></span><span class="sig-name descname"><span class="pre">Contact</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#client.model.Contact" title="Ссылка на это определение">¶</a></dt>
+<dd><p>Таблица временного хранения контактов пользователя</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="client.model.Message">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">client.model.</span></span><span class="sig-name descname"><span class="pre">Message</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#client.model.Message" title="Ссылка на это определение">¶</a></dt>
+<dd><p>Таблица хранения сообщений в чатах пользователя</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="client.model.init_db">
+<span class="sig-prename descclassname"><span class="pre">client.model.</span></span><span class="sig-name descname"><span class="pre">init_db</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">username</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#client.model.init_db" title="Ссылка на это определение">¶</a></dt>
+<dd><p>Функция инициализации сессии ORM и базы данных при её отсутствии</p>
+</dd></dl>
+
+</section>
+<section id="module-client.storage">
+<span id="storage-py"></span><h2>Модуль storage.py<a class="headerlink" href="#module-client.storage" title="Permalink to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="client.storage.ClientStorage">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">client.storage.</span></span><span class="sig-name descname"><span class="pre">ClientStorage</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">username</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#client.storage.ClientStorage" title="Ссылка на это определение">¶</a></dt>
+<dd><p>Класс-обертка над ORM для взаимодействия клиента с базой данных</p>
+</dd></dl>
+
+</section>
+<section id="module-client.transport">
+<span id="transport-py"></span><h2>Модуль transport.py<a class="headerlink" href="#module-client.transport" title="Permalink to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="client.transport.JIMClient">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">client.transport.</span></span><span class="sig-name descname"><span class="pre">JIMClient</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ip</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">port</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">username</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">password</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#client.transport.JIMClient" title="Ссылка на это определение">¶</a></dt>
+<dd><p>Класс ядра клиента, отвечает за прием и передачу сообщений, а также взаимодействие с базой данных</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="client.transport.JIMClient.authenticate">
+<span class="sig-name descname"><span class="pre">authenticate</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#client.transport.JIMClient.authenticate" title="Ссылка на это определение">¶</a></dt>
+<dd><p>Запускает подключение и аутентификацию клиента на сервере</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="client.transport.JIMClient.run">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#client.transport.JIMClient.run" title="Ссылка на это определение">¶</a></dt>
+<dd><p>Запускает синхронизацию контактов и фоновый поток обработки сообщений после подключения и аутентификации</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="client.transport.SignalNotifier">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">client.transport.</span></span><span class="sig-name descname"><span class="pre">SignalNotifier</span></span><a class="headerlink" href="#client.transport.SignalNotifier" title="Ссылка на это определение">¶</a></dt>
+<dd><p>Класс-генератор сигналов PyQt для взаимодействия с графическим интерфейсом</p>
+</dd></dl>
+
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">jim</a></h1>
+
+
+
+
+
+
+
+
+<h3>Навигация</h3>
+<p class="caption" role="heading"><span class="caption-text">Содержание:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="_client.html">Запуск клиента</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Пакет «client»</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#module-client.application">Модуль application.py</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-client.config">Модуль config.py</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#logger-conf-py">Модуль logger_conf.py</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-client.messages">Модуль messages.py</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-client.model">Модуль model.py</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-client.storage">Модуль storage.py</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-client.transport">Модуль transport.py</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="_common.html">Пакет «Common»</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="_client.html" title="предыдущая глава">Запуск клиента</a></li>
+      <li>Next: <a href="_common.html" title="следующая глава">Пакет «Common»</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Быстрый поиск</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Искать" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2023, dashviolin.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 6.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/_client pkg.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
