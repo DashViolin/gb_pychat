@@ -1,0 +1,143 @@
+
+<!DOCTYPE html>
+
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>Запуск сервера &#8212; документация jim 0.1</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx_highlight.js"></script>
+    <script src="_static/translations.js"></script>
+    <link rel="index" title="Алфавитный указатель" href="genindex.html" />
+    <link rel="search" title="Поиск" href="search.html" />
+    <link rel="next" title="Совместный старт" href="_launcher.html" />
+    <link rel="prev" title="Запуск клиента" href="_client.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="id1">
+<h1>Запуск сервера<a class="headerlink" href="#id1" title="Permalink to this heading">¶</a></h1>
+<section id="server-pyw">
+<h2>Скрипт «server.pyw»<a class="headerlink" href="#server-pyw" title="Permalink to this heading">¶</a></h2>
+<p>Запускаемый модуль графического интерфейса управления сервером.</p>
+<p>Использование:
+<code class="docutils literal notranslate"><span class="pre">poetry</span> <span class="pre">run</span> <span class="pre">python</span> <span class="pre">server.pyw</span></code></p>
+<a class="reference internal image-reference" href="_images/server.png"><img alt="Общий вид главного окна сервера" src="_images/server.png" style="width: 300px;" /></a>
+</section>
+<section id="server-py">
+<h2>Скрипт «server.py»<a class="headerlink" href="#server-py" title="Permalink to this heading">¶</a></h2>
+<p>Запускаемый модуль ядра сервера без графического интерфейса, содержит парсер аргументов командной строки и функционал инициализации приложения.</p>
+<p><strong>Использование</strong></p>
+<p>Модуль подерживает аргументы командной строки:</p>
+<ol class="arabic simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">-a</span></code>, <code class="docutils literal notranslate"><span class="pre">--address</span></code> - IP адрес или имя сервера, с которого принимаются соединения.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-p</span></code>, <code class="docutils literal notranslate"><span class="pre">--port</span></code> - порт сервера, на котором принимаются соединения</p></li>
+</ol>
+<p>По умолчанию используется комбинация <code class="docutils literal notranslate"><span class="pre">127.0.0.1:7777</span></code></p>
+<p>Примеры использования:</p>
+<p><code class="docutils literal notranslate"><span class="pre">poetry</span> <span class="pre">run</span> <span class="pre">python</span> <span class="pre">server.py</span></code></p>
+<p><em>Запуск сервера с настройками по умолчанию на</em> <code class="docutils literal notranslate"><span class="pre">127.0.0.1:7777</span></code></p>
+<p><code class="docutils literal notranslate"><span class="pre">poetry</span> <span class="pre">run</span> <span class="pre">python</span> <span class="pre">server.py</span> <span class="pre">-p</span> <span class="pre">8080</span></code></p>
+<p><em>Запуск сервера на порту 8080</em></p>
+<p><code class="docutils literal notranslate"><span class="pre">poetry</span> <span class="pre">run</span> <span class="pre">python</span> <span class="pre">server.py</span> <span class="pre">-a</span> <span class="pre">localhost</span></code></p>
+<p><em>Запуск сервера принимающего только соединения с localhost</em></p>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">jim</a></h1>
+
+
+
+
+
+
+
+
+<h3>Навигация</h3>
+<p class="caption" role="heading"><span class="caption-text">Содержание:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="_client.html">Запуск клиента</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Запуск сервера</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#server-pyw">Скрипт «server.pyw»</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#server-py">Скрипт «server.py»</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="_launcher.html">Совместный старт</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_client%20pkg.html">Пакет «client»</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_server_pkg.html">Пакет «server»</a></li>
+<li class="toctree-l1"><a class="reference internal" href="_common.html">Пакет «Common»</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="_client.html" title="предыдущая глава">Запуск клиента</a></li>
+      <li>Next: <a href="_launcher.html" title="следующая глава">Совместный старт</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Быстрый поиск</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Искать" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2023, dashviolin.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 6.0.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/_server.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

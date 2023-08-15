@@ -1,0 +1,35 @@
+[tool.poetry]
+name = "gb-pychat-server"
+version = "0.1.2"
+description = ""
+license = "MIT"
+authors = ["DashViolin <mymail@srv.org>"]
+packages = [
+    { include = "server", from = "src" }
+]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+SQLAlchemy = "^1.4.44"
+PyQt6 = "^6.4.0"
+alembic = "^1.8.1"
+gb-pychat-common = "^0.1.0"
+# gb-pychat-common = { path = "../common" }
+
+[tool.poetry.dev-dependencies]
+cx-Freeze = "^6.13.1"
+isort = "^5.10.1"
+black = "^22.3.0"
+autoflake = "^1.4"
+Sphinx = "^6.1.2"
+
+[tool.poetry.scripts]
+server-gui = "server.run_server_gui:run"
+server-cli = "server.run_server_cli:run"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 120
